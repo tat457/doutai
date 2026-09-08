@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>動体視力トレーナー - Dynamic Visual Acuity Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Zen Kaku Gothic New', 'Outfit', sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-button {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-button:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: rgba(56, 189, 248, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .glass-button:active {
+            transform: translateY(1px);
+        }
+
+        /* Glowing text effects */
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        .glow-pink {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.6), 0 0 20px rgba(236, 72, 153, 0.4);
+        }
+
+        /* Canvas styling */
+        #gameCanvas {
+            touch-action: none;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-hidden selection:bg-cyan-500 selection:text-white">
+
+    <!-- Header / Navigation -->
+    <header class="w-full p-4 z-20 flex justify-between items-center glass-panel border-b border-slate-800">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-bolt text-slate-950 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-400 bg-clip-text text-transparent font-outfit">
+                    FLASH REFLEX
+                </h1>
+                <p class="text-xs text-slate-400">動体視力 & 反応速度トレーニング</p>
+            </div>
+        </div>
+
+        <!-- Controls / HighScore -->
+        <div class="flex items-center gap-3">
+            <div class="hidden sm:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
+                <span class="text-[10px] text-slate-400 uppercase tracking-widest font-outfit">BEST SCORE</span>
+                <span id="headerBestScore" class="text-sm font-bold text-cyan-400 font-outfit">0</span>
+            </div>
+            <button id="soundToggleBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
+                <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+            </button>
+            <button id="infoModalBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
+                <i class="fa-solid fa-circle-info"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+
+        <!-- 1. START SCREEN -->
+        <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-6 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800">
+            <div class="text-center space-y-2">
+                <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide mb-1">
+                    <i class="fa-solid fa-crosshair mr-1"></i> VISION & REFLEX ENGINE
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-white">ゲーム設定</h2>
+                <p class="text-xs sm:text-sm text-slate-400">光ったポイントを素早くタップして動体視力を鍛えよう！</p>
+            </div>
+
+            <!-- Mode Selection -->
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">ゲームモード</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center active-mode border-cyan-500 bg-slate-800" data-mode="time">
+                        <i class="fa-solid fa-stopwatch text-cyan-400 text-lg mb-1"></i>
+                        <span class="text-xs font-bold block text-white">30秒アタック</span>
+                    </button>
+                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="count">
+                        <i class="fa-solid fa-bullseye text-fuchsia-400 text-lg mb-1"></i>
+                        <span class="text-xs font-bold block text-white">30個消去</span>
+                    </button>
+                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="survival">
+                        <i class="fa-solid fa-shield-heart text-emerald-400 text-lg mb-1"></i>
+                        <span class="text-xs font-bold block text-white">サバイバル</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Difficulty Selection -->
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">難易度</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="easy">
+                        EASY
+                    </button>
+                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-white active-diff border-cyan-500 bg-slate-800" data-diff="normal">
+                        NORMAL
+                    </button>
+                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="hard">
+                        HARD
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Description Summary -->
+            <div id="modeDescription" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300 leading-relaxed min-h-[50px] flex items-center">
+                制限時間30秒以内に、現れる光の点を何回タップできるか競います。
+            </div>
+
+            <!-- Start Button -->
+            <button id="startGameBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-slate-950 font-black text-lg shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> START GAME
+            </button>
+        </div>
+
+        <!-- 2. GAME PLAY HUD & CANVAS -->
+        <div id="gameScreen" class="absolute inset-0 flex flex-col hidden">
+            <!-- HUD Stats Bar -->
+            <div class="w-full p-4 flex justify-between items-center z-10 pointer-events-none select-none max-w-4xl mx-auto">
+                <!-- Score / Count -->
+                <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800">
+                    <span id="statLabel1" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SCORE</span>
+                    <span id="statVal1" class="text-2xl font-black text-cyan-400 font-outfit">0</span>
+                </div>
+
+                <!-- Center Combo Indicator -->
+                <div class="flex flex-col items-center">
+                    <div id="comboContainer" class="opacity-0 transition-opacity duration-200 flex flex-col items-center">
+                        <span id="comboText" class="text-lg font-black italic bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent font-outfit">
+                            0 COMBO!
+                        </span>
+                    </div>
+                    <div id="recentReaction" class="text-xs font-mono text-slate-400 mt-1">
+                        -- ms
+                    </div>
+                </div>
+
+                <!-- Time / Misses -->
+                <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800">
+                    <span id="statLabel2" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">TIME</span>
+                    <span id="statVal2" class="text-2xl font-black text-fuchsia-400 font-outfit">30.0s</span>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden">
+                <canvas id="gameCanvas" class="w-full h-full cursor-crosshair"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. RESULT MODAL / SCREEN -->
+        <div id="resultScreen" class="hidden w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-30 shadow-2xl shadow-cyan-950/50 border border-slate-800 animate-fade-in">
+            <div class="text-center space-y-1">
+                <span class="text-xs font-bold uppercase tracking-widest text-slate-400">FINISH!</span>
+                <h2 class="text-3xl font-black text-white font-outfit">PERFORMANCE</h2>
+            </div>
+
+            <!-- Main Score Badge -->
+            <div class="relative p-5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex flex-col items-center justify-center shadow-inner">
+                <span id="resultRank" class="text-5xl font-black my-1 glow-cyan font-outfit">RANK A</span>
+                <span id="resultRankTitle" class="text-xs font-semibold text-cyan-400">プロ級の動体視力</span>
+            </div>
+
+            <!-- Detail Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col">
+                    <span class="text-[10px] text-slate-400 font-bold">スコア / 達成</span>
+                    <span id="resultScore" class="text-xl font-bold text-white font-outfit">0</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col">
+                    <span class="text-[10px] text-slate-400 font-bold">平均反応時間</span>
+                    <span id="resultAvgTime" class="text-xl font-bold text-cyan-400 font-outfit">0 ms</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col">
+                    <span class="text-[10px] text-slate-400 font-bold">正確性 (Accuracy)</span>
+                    <span id="resultAccuracy" class="text-xl font-bold text-emerald-400 font-outfit">0%</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col">
+                    <span class="text-[10px] text-slate-400 font-bold">最大コンボ</span>
+                    <span id="resultMaxCombo" class="text-xl font-bold text-yellow-400 font-outfit">0</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-2">
+                <button id="retryBtn" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> もう一度遊ぶ
+                </button>
+                <button id="menuBtn" class="px-5 py-3.5 rounded-xl glass-button text-slate-200 font-bold text-sm hover:text-white active:scale-95">
+                    メニュー
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Info & GitHub Guide Modal -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-cyan-400"></i> ゲームについて & GitHub公開方法
+                </h3>
+                <button id="closeInfoBtn" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Tabs / Rules Section -->
+            <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <h4 class="font-bold text-cyan-300 border-l-2 border-cyan-400 pl-2">遊び方</h4>
+                <ul class="list-disc list-inside space-y-1 text-slate-400">
+                    <li>画面内に一瞬出現する<b>「光る点」</b>を指やマウスで素早くタッチします。</li>
+                    <li>連続で成功すると<b>コンボ</b>が繋がり、スコア倍率がアップします。</li>
+                    <li>お手つき（何もない場所のタップ）やターゲットの消滅はコンボが切れる原因になります。</li>
+                </ul>
+
+                <h4 class="font-bold text-fuchsia-300 border-l-2 border-fuchsia-400 pl-2 mt-4">GitHub Pagesで即時無料公開する手順</h4>
+                <ol class="list-decimal list-inside space-y-1 text-slate-400 font-mono text-[11px] sm:text-xs">
+                    <li>GitHubで新規リポジトリを作成（例: <code class="text-cyan-400">dynamic-vision-game</code>）</li>
+                    <li>このコードを <code class="text-cyan-400">index.html</code> という名前で保存してコミット&プッシュ</li>
+                    <li>リポジトリの <b>Settings &gt; Pages</b> を開く</li>
+                    <li>Source を <b>Deploy from a branch</b> に設定し、<code class="text-cyan-400">main</code> (または <code class="text-cyan-400">master</code>) ブランチを選択して Save</li>
+                    <li>数分後に発行されるURLにアクセスするだけで誰でもWebでプレイ可能！</li>
+                </ol>
+            </div>
+
+            <button id="closeInfoModalBtn" class="mt-2 w-full py-3 rounded-xl glass-button text-xs font-bold text-white hover:bg-slate-800">
+                閉じる
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playHit(combo = 1) {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                // Base frequency rises with combo count
+                const baseFreq = 440;
+                const freq = baseFreq * Math.pow(1.05, Math.min(combo, 20));
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.5, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playMiss() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playFinish() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.3);
+                });
+            }
+        }
+
+        class Target {
+            constructor(x, y, radius, duration) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.maxDuration = duration; // in ms
+                this.remaining = duration;
+                this.spawnTime = performance.now();
+                this.isHit = false;
+                this.hue = Math.floor(Math.random() * 60) + 170; // Cyan to Purple range
+            }
+
+            draw(ctx) {
+                const progress = this.remaining / this.maxDuration;
+                const currentRadius = this.radius * Math.sin(Math.PI * (1 - progress * 0.1)); // slight pulse
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(1, currentRadius), 0, Math.PI * 2);
+
+                // Outer Glow
+                ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.8)`;
+                ctx.shadowBlur = 20;
+
+                // Gradient Fill
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, currentRadius));
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.4, `hsl(${this.hue}, 100%, 75%)`);
+                grad.addColorStop(1, `hsl(${this.hue}, 90%, 45%)`);
+
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Inner ring duration indicator
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius + 4, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
+                ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, 0.6)`;
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                this.hue = hue;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 6 + 2;
+                this.friction = 0.94;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.02;
+                this.radius = Math.random() * 3 + 2;
+            }
+
+            update() {
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.alpha -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
+                ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class GameEngine {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.sound = new SoundEngine();
+
+                // Game Config Presets
+                this.diffConfig = {
+                    easy: { radius: 36, duration: 1800, spawnInterval: 900 },
+                    normal: { radius: 26, duration: 1200, spawnInterval: 650 },
+                    hard: { radius: 18, duration: 800, spawnInterval: 450 }
+                };
+
+                // Mode descriptions
+                this.modeDescriptions = {
+                    time: "制限時間30秒以内に、現れる光の点を何回タップできるか競います。",
+                    count: "30個のターゲットをすべて消去するまでのタイム（秒）を測定します。",
+                    survival: "ライフ3点。ターゲットを逃すかお手つきするとライフ減少。どこまで耐えられるか挑戦！"
+                };
+
+                // State variables
+                this.mode = 'time'; // time, count, survival
+                this.difficulty = 'normal';
+                this.isPlaying = false;
+
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.totalClicks = 0;
+                this.hits = 0;
+                this.misses = 0;
+                this.reactionTimes = [];
+                this.lives = 3;
+
+                this.timeLeft = 30.0;
+                this.targetsCount = 0; // For count mode
+                this.maxTargetsCount = 30;
+
+                this.targets = [];
+                this.particles = [];
+                this.lastSpawnTime = 0;
+                this.lastFrameTime = 0;
+                this.animFrameId = null;
+
+                // Best Scores Storage Key
+                this.storageKey = 'flash_reflex_bests';
+                this.bestScores = this.loadBestScores();
+
+                this.initUI();
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            loadBestScores() {
+                try {
+                    const saved = localStorage.getItem(this.storageKey);
+                    return saved ? JSON.parse(saved) : {};
+                } catch(e) {
+                    return {};
+                }
+            }
+
+            saveBestScore(val) {
+                const key = `${this.mode}_${this.difficulty}`;
+                const current = this.bestScores[key] || 0;
+                if (this.mode === 'count') {
+                    // For time-based, lower is better
+                    if (current === 0 || val < current) {
+                        this.bestScores[key] = val;
+                    }
+                } else {
+                    // For score-based, higher is better
+                    if (val > current) {
+                        this.bestScores[key] = val;
+                    }
+                }
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.bestScores));
+                } catch(e) {}
+                this.updateHeaderBest();
+            }
+
+            updateHeaderBest() {
+                const key = `${this.mode}_${this.difficulty}`;
+                const best = this.bestScores[key];
+                const headerElem = document.getElementById('headerBestScore');
+                if (best !== undefined) {
+                    headerElem.textContent = this.mode === 'count' ? `${best.toFixed(1)}s` : best;
+                } else {
+                    headerElem.textContent = '--';
+                }
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+            }
+
+            initUI() {
+                // Mode Switch Buttons
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.mode-btn').forEach(b => {
+                            b.classList.remove('active-mode', 'border-cyan-500', 'bg-slate-800');
+                            b.classList.add('opacity-70');
+                        });
+                        const target = e.currentTarget;
+                        target.classList.add('active-mode', 'border-cyan-500', 'bg-slate-800');
+                        target.classList.remove('opacity-70');
+
+                        this.mode = target.dataset.mode;
+                        document.getElementById('modeDescription').textContent = this.modeDescriptions[this.mode];
+                        this.updateHeaderBest();
+                    });
+                });
+
+                // Difficulty Buttons
+                document.querySelectorAll('.diff-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.diff-btn').forEach(b => {
+                            b.classList.remove('active-diff', 'border-cyan-500', 'bg-slate-800');
+                            b.classList.add('text-slate-300');
+                        });
+                        const target = e.currentTarget;
+                        target.classList.add('active-diff', 'border-cyan-500', 'bg-slate-800');
+                        target.classList.remove('text-slate-300');
+
+                        this.difficulty = target.dataset.diff;
+                        this.updateHeaderBest();
+                    });
+                });
+
+                // Sound Toggle
+                document.getElementById('soundToggleBtn').addEventListener('click', () => {
+                    this.sound.muted = !this.sound.muted;
+                    const icon = document.getElementById('soundIcon');
+                    if (this.sound.muted) {
+                        icon.className = 'fa-solid fa-volume-xmark text-red-400';
+                    } else {
+                        icon.className = 'fa-solid fa-volume-high text-cyan-400';
+                    }
+                });
+
+                // Info Modal Toggle
+                document.getElementById('infoModalBtn').addEventListener('click', () => {
+                    document.getElementById('infoModal').classList.remove('hidden');
+                });
+                document.getElementById('closeInfoBtn').addEventListener('click', () => {
+                    document.getElementById('infoModal').classList.add('hidden');
+                });
+                document.getElementById('closeInfoModalBtn').addEventListener('click', () => {
+                    document.getElementById('infoModal').classList.add('hidden');
+                });
+
+                // Game Control Buttons
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('menuBtn').addEventListener('click', () => this.showStartScreen());
+
+                // Canvas Click/Touch Input Handler
+                const handlePointer = (e) => {
+                    if (!this.isPlaying) return;
+                    e.preventDefault();
+
+                    const rect = this.canvas.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    const x = clientX - rect.left;
+                    const y = clientY - rect.top;
+
+                    this.processTap(x, y);
+                };
+
+                this.canvas.addEventListener('mousedown', handlePointer);
+                this.canvas.addEventListener('touchstart', handlePointer, { passive: false });
+
+                this.updateHeaderBest();
+            }
+
+            showStartScreen() {
+                this.isPlaying = false;
+                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+
+                document.getElementById('startScreen').classList.remove('hidden');
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('resultScreen').classList.add('hidden');
+            }
+
+            startGame() {
+                this.sound.init();
+                this.isPlaying = true;
+
+                // Reset stats
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.totalClicks = 0;
+                this.hits = 0;
+                this.misses = 0;
+                this.reactionTimes = [];
+                this.lives = 3;
+                this.targetsCount = 0;
+                this.targets = [];
+                this.particles = [];
+
+                this.timeLeft = this.mode === 'time' ? 30.0 : 0.0;
+                this.lastFrameTime = performance.now();
+                this.lastSpawnTime = performance.now();
+
+                // UI setup for current mode
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('resultScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+
+                const label1 = document.getElementById('statLabel1');
+                const label2 = document.getElementById('statLabel2');
+
+                if (this.mode === 'time') {
+                    label1.textContent = 'SCORE';
+                    label2.textContent = 'TIME';
+                } else if (this.mode === 'count') {
+                    label1.textContent = 'REMAINING';
+                    label2.textContent = 'TIME';
+                } else if (this.mode === 'survival') {
+                    label1.textContent = 'SCORE';
+                    label2.textContent = 'LIVES';
+                }
+
+                this.updateHUD();
+                this.spawnTarget();
+
+                // Start game loop
+                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+                this.animFrameId = requestAnimationFrame((now) => this.loop(now));
+            }
+
+            spawnTarget() {
+                const conf = this.diffConfig[this.difficulty];
+                const padding = conf.radius + 30;
+
+                const maxX = this.canvas.width - padding;
+                const maxY = this.canvas.height - padding;
+
+                const x = Math.random() * (maxX - padding) + padding;
+                const y = Math.random() * (maxY - padding) + padding;
+
+                this.targets.push(new Target(x, y, conf.radius, conf.duration));
+            }
+
+            processTap(x, y) {
+                this.totalClicks++;
+                let hitAny = false;
+                const now = performance.now();
+
+                for (let i = this.targets.length - 1; i >= 0; i--) {
+                    const t = this.targets[i];
+                    const dist = Math.hypot(t.x - x, t.y - y);
+
+                    if (dist <= t.radius + 12) { // Slightly forgiving touch radius
+                        hitAny = true;
+                        this.hits++;
+                        this.combo++;
+                        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                        // Calculate reaction time in ms
+                        const rxTime = Math.round(now - t.spawnTime);
+                        this.reactionTimes.push(rxTime);
+                        document.getElementById('recentReaction').textContent = `${rxTime} ms`;
+
+                        // Score calculation
+                        const basePoints = 100;
+                        const comboBonus = Math.min(this.combo * 10, 200);
+                        this.score += basePoints + comboBonus;
+
+                        this.sound.playHit(this.combo);
+                        this.createBurst(t.x, t.y, t.hue);
+
+                        // Remove target
+                        this.targets.splice(i, 1);
+
+                        if (this.mode === 'count') {
+                            this.targetsCount++;
+                            if (this.targetsCount >= this.maxTargetsCount) {
+                                this.endGame();
+                                return;
+                            }
+                        }
+
+                        // Immediate spawn new target
+                        this.spawnTarget();
+                        break;
+                    }
+                }
+
+                if (!hitAny) {
+                    this.misses++;
+                    this.combo = 0;
+                    this.sound.playMiss();
+
+                    if (this.mode === 'survival') {
+                        this.lives--;
+                        if (this.lives <= 0) {
+                            this.endGame();
+                            return;
+                        }
+                    }
+                }
+
+                this.updateHUD();
+            }
+
+            createBurst(x, y, hue) {
+                for (let i = 0; i < 16; i++) {
+                    this.particles.push(new Particle(x, y, hue));
+                }
+            }
+
+            loop(now) {
+                if (!this.isPlaying) return;
+
+                const dt = (now - this.lastFrameTime) / 1000;
+                this.lastFrameTime = now;
+
+                // Clear Canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Mode specific time updates
+                if (this.mode === 'time') {
+                    this.timeLeft -= dt;
+                    if (this.timeLeft <= 0) {
+                        this.timeLeft = 0;
+                        this.updateHUD();
+                        this.endGame();
+                        return;
+                    }
+                } else if (this.mode === 'count') {
+                    this.timeLeft += dt;
+                } else if (this.mode === 'survival') {
+                    this.timeLeft += dt;
+                }
+
+                // Auto Spawn Target logic if none exist or interval passed
+                const conf = this.diffConfig[this.difficulty];
+                if (this.targets.length === 0 || (now - this.lastSpawnTime > conf.spawnInterval && this.targets.length < 2)) {
+                    this.spawnTarget();
+                    this.lastSpawnTime = now;
+                }
+
+                // Update & Draw Targets
+                for (let i = this.targets.length - 1; i >= 0; i--) {
+                    const t = this.targets[i];
+                    t.remaining -= dt * 1000;
+
+                    if (t.remaining <= 0) {
+                        // Target expired
+                        this.targets.splice(i, 1);
+                        this.combo = 0;
+
+                        if (this.mode === 'survival') {
+                            this.lives--;
+                            if (this.lives <= 0) {
+                                this.endGame();
+                                return;
+                            }
+                        }
+                        this.updateHUD();
+                    } else {
+                        t.draw(this.ctx);
+                    }
+                }
+
+                // Update & Draw Particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.update();
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                    } else {
+                        p.draw(this.ctx);
+                    }
+                }
+
+                this.updateHUD();
+                this.animFrameId = requestAnimationFrame((timestamp) => this.loop(timestamp));
+            }
+
+            updateHUD() {
+                const val1 = document.getElementById('statVal1');
+                const val2 = document.getElementById('statVal2');
+
+                if (this.mode === 'time') {
+                    val1.textContent = this.score;
+                    val2.textContent = `${Math.max(0, this.timeLeft).toFixed(1)}s`;
+                } else if (this.mode === 'count') {
+                    val1.textContent = `${this.maxTargetsCount - this.targetsCount}`;
+                    val2.textContent = `${this.timeLeft.toFixed(1)}s`;
+                } else if (this.mode === 'survival') {
+                    val1.textContent = this.score;
+                    val2.textContent = '❤️'.repeat(Math.max(0, this.lives));
+                }
+
+                // Combo Indicator
+                const comboContainer = document.getElementById('comboContainer');
+                const comboText = document.getElementById('comboText');
+
+                if (this.combo >= 2) {
+                    comboContainer.classList.remove('opacity-0');
+                    comboText.textContent = `${this.combo} COMBO!`;
+                } else {
+                    comboContainer.classList.add('opacity-0');
+                }
+            }
+
+            endGame() {
+                this.isPlaying = false;
+                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+
+                this.sound.playFinish();
+
+                // Compute Stats
+                const avgRxTime = this.reactionTimes.length > 0 
+                    ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
+                    : 0;
+
+                const accuracy = this.totalClicks > 0 
+                    ? Math.round((this.hits / this.totalClicks) * 100)
+                    : 0;
+
+                // Rank & Evaluation Logic
+                let rank = 'C';
+                let rankTitle = 'トレーニングを続けましょう';
+
+                if (this.mode === 'count') {
+                    // Time based evaluation
+                    if (this.timeLeft <= 15.0) { rank = 'S+'; rankTitle = '神の動体視力'; }
+                    else if (this.timeLeft <= 18.0) { rank = 'S'; rankTitle = 'アスリート級'; }
+                    else if (this.timeLeft <= 22.0) { rank = 'A'; rankTitle = 'プロゲーマー級'; }
+                    else if (this.timeLeft <= 28.0) { rank = 'B'; rankTitle = '平均以上'; }
+                } else {
+                    // Reaction & Score based
+                    if (avgRxTime > 0 && avgRxTime <= 280 && accuracy >= 90) {
+                        rank = 'S+'; rankTitle = '神の動体視力';
+                    } else if (avgRxTime <= 340 && accuracy >= 80) {
+                        rank = 'S'; rankTitle = '超人レベル';
+                    } else if (avgRxTime <= 420) {
+                        rank = 'A'; rankTitle = 'プロゲーマー級';
+                    } else if (avgRxTime <= 520) {
+                        rank = 'B'; rankTitle = '標準レベル';
+                    }
+                }
+
+                // Save Best Score
+                const finalMetric = this.mode === 'count' ? this.timeLeft : this.score;
+                this.saveBestScore(finalMetric);
+
+                // Populate Result Modal
+                document.getElementById('resultRank').textContent = `RANK ${rank}`;
+                document.getElementById('resultRankTitle').textContent = rankTitle;
+
+                if (this.mode === 'count') {
+                    document.getElementById('resultScore').textContent = `${this.timeLeft.toFixed(2)}s`;
+                } else {
+                    document.getElementById('resultScore').textContent = this.score;
+                }
+
+                document.getElementById('resultAvgTime').textContent = `${avgRxTime} ms`;
+                document.getElementById('resultAccuracy').textContent = `${accuracy}%`;
+                document.getElementById('resultMaxCombo').textContent = this.maxCombo;
+
+                // UI Transition
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('resultScreen').classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.game = new GameEngine();
+        });
+    </script>
+</body>
+</html>
