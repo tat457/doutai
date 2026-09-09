@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>動体視力トレーナー - Dynamic Visual Acuity Game</title>
+    <title>動体視力トレーナー AR - Dynamic Visual Acuity Game</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -12,6 +12,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <!-- MediaPipe Hands for Hand Tracking AI (Pinned stable versions) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
 
     <style>
         body {
@@ -27,20 +31,20 @@
 
         /* Glassmorphism effects */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .glass-button {
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(30, 41, 59, 0.85);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.15);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .glass-button:hover {
-            background: rgba(51, 65, 85, 0.9);
+            background: rgba(51, 65, 85, 0.95);
             border-color: rgba(56, 189, 248, 0.5);
             transform: translateY(-2px);
         }
@@ -49,19 +53,10 @@
             transform: translateY(1px);
         }
 
-        /* Glowing text effects */
-        .glow-cyan {
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.4);
-        }
-
-        .glow-pink {
-            text-shadow: 0 0 10px rgba(236, 72, 153, 0.6), 0 0 20px rgba(236, 72, 153, 0.4);
-        }
-
         /* Canvas styling */
         #gameCanvas {
             touch-action: none;
-            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            background: #020617;
         }
 
         /* Custom scrollbar */
@@ -75,32 +70,44 @@
             background: rgba(51, 65, 85, 0.8);
             border-radius: 3px;
         }
+
+        /* Pulsing neon badge */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .pulse-glow {
+            animation: pulseGlow 1.8s infinite ease-in-out;
+        }
     </style>
 </head>
 <body class="h-full flex flex-col justify-between overflow-hidden selection:bg-cyan-500 selection:text-white">
 
+    <!-- Hidden Video Element for MediaPipe Input -->
+    <video id="webcam" class="hidden" playsinline muted></video>
+
     <!-- Header / Navigation -->
-    <header class="w-full p-4 z-20 flex justify-between items-center glass-panel border-b border-slate-800">
+    <header class="w-full p-3 sm:p-4 z-20 flex justify-between items-center glass-panel border-b border-slate-800">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <i class="fa-solid fa-bolt text-slate-950 text-xl"></i>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-hand-pointer text-slate-950 text-xl"></i>
             </div>
             <div>
-                <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-400 bg-clip-text text-transparent font-outfit">
-                    FLASH REFLEX
+                <h1 class="text-lg sm:text-xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-400 bg-clip-text text-transparent font-outfit">
+                    FLASH REFLEX AR
                 </h1>
-                <p class="text-xs text-slate-400">動体視力 & 反応速度トレーニング</p>
+                <p class="text-[10px] sm:text-xs text-slate-400">ARカメラ & 手認識 動体視力トレーニング</p>
             </div>
         </div>
 
         <!-- Controls / HighScore -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
             <div class="hidden sm:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
                 <span class="text-[10px] text-slate-400 uppercase tracking-widest font-outfit">BEST SCORE</span>
                 <span id="headerBestScore" class="text-sm font-bold text-cyan-400 font-outfit">0</span>
             </div>
             <button id="soundToggleBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
-                <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                <i class="fa-solid fa-volume-high text-cyan-400" id="soundIcon"></i>
             </button>
             <button id="infoModalBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
                 <i class="fa-solid fa-circle-info"></i>
@@ -112,13 +119,30 @@
     <main class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden">
 
         <!-- 1. START SCREEN -->
-        <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-6 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800">
+        <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800">
             <div class="text-center space-y-2">
                 <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide mb-1">
-                    <i class="fa-solid fa-crosshair mr-1"></i> VISION & REFLEX ENGINE
+                    <i class="fa-solid fa-camera-retro mr-1"></i> AR VISION & HAND TRACKING
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-black text-white">ゲーム設定</h2>
-                <p class="text-xs sm:text-sm text-slate-400">光ったポイントを素早くタップして動体視力を鍛えよう！</p>
+                <p class="text-xs sm:text-sm text-slate-400">カメラに手をかざすか画面タップで光を素早くタッチ！</p>
+            </div>
+
+            <!-- AR / Camera Mode Toggle Switch -->
+            <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <i class="fa-solid fa-video"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">AR カメラ手認識</div>
+                        <div class="text-[10px] text-slate-400">Webカメラで手かざしタッチ</div>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="arToggle" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                </label>
             </div>
 
             <!-- Mode Selection -->
@@ -157,8 +181,8 @@
             </div>
 
             <!-- Game Description Summary -->
-            <div id="modeDescription" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300 leading-relaxed min-h-[50px] flex items-center">
-                制限時間30秒以内に、現れる光の点を何回タップできるか競います。
+            <div id="modeDescription" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300 leading-relaxed min-h-[48px] flex items-center">
+                制限時間30秒以内に、現れる光の点を何回タッチできるか競います。
             </div>
 
             <!-- Start Button -->
@@ -170,29 +194,34 @@
         <!-- 2. GAME PLAY HUD & CANVAS -->
         <div id="gameScreen" class="absolute inset-0 flex flex-col hidden">
             <!-- HUD Stats Bar -->
-            <div class="w-full p-4 flex justify-between items-center z-10 pointer-events-none select-none max-w-4xl mx-auto">
+            <div class="w-full p-3 sm:p-4 flex justify-between items-center z-10 pointer-events-none select-none max-w-4xl mx-auto gap-2">
                 <!-- Score / Count -->
-                <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800">
-                    <span id="statLabel1" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SCORE</span>
-                    <span id="statVal1" class="text-2xl font-black text-cyan-400 font-outfit">0</span>
+                <div class="glass-panel px-3 sm:px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800 min-w-[70px]">
+                    <span id="statLabel1" class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">SCORE</span>
+                    <span id="statVal1" class="text-xl sm:text-2xl font-black text-cyan-400 font-outfit">0</span>
                 </div>
 
-                <!-- Center Combo Indicator -->
-                <div class="flex flex-col items-center">
+                <!-- Center Hand Detection Badge & Combo Indicator -->
+                <div class="flex flex-col items-center gap-1">
+                    <div id="handStatusBadge" class="px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-all bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        <i class="fa-solid fa-hand text-amber-400"></i>
+                        <span id="handStatusText">手を探しています...</span>
+                    </div>
+
                     <div id="comboContainer" class="opacity-0 transition-opacity duration-200 flex flex-col items-center">
-                        <span id="comboText" class="text-lg font-black italic bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent font-outfit">
+                        <span id="comboText" class="text-base sm:text-lg font-black italic bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent font-outfit">
                             0 COMBO!
                         </span>
                     </div>
-                    <div id="recentReaction" class="text-xs font-mono text-slate-400 mt-1">
+                    <div id="recentReaction" class="text-[10px] sm:text-xs font-mono text-slate-400">
                         -- ms
                     </div>
                 </div>
 
                 <!-- Time / Misses -->
-                <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800">
-                    <span id="statLabel2" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">TIME</span>
-                    <span id="statVal2" class="text-2xl font-black text-fuchsia-400 font-outfit">30.0s</span>
+                <div class="glass-panel px-3 sm:px-4 py-2 rounded-2xl flex flex-col items-center border border-slate-800 min-w-[70px]">
+                    <span id="statLabel2" class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">TIME</span>
+                    <span id="statVal2" class="text-xl sm:text-2xl font-black text-fuchsia-400 font-outfit">30.0s</span>
                 </div>
             </div>
 
@@ -211,7 +240,7 @@
 
             <!-- Main Score Badge -->
             <div class="relative p-5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex flex-col items-center justify-center shadow-inner">
-                <span id="resultRank" class="text-5xl font-black my-1 glow-cyan font-outfit">RANK A</span>
+                <span id="resultRank" class="text-5xl font-black my-1 text-cyan-400 font-outfit">RANK A</span>
                 <span id="resultRankTitle" class="text-xs font-semibold text-cyan-400">プロ級の動体視力</span>
             </div>
 
@@ -248,34 +277,33 @@
 
     </main>
 
-    <!-- Info & GitHub Guide Modal -->
+    <!-- Info & Help Modal -->
     <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center pb-2 border-b border-slate-800">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-circle-question text-cyan-400"></i> ゲームについて & GitHub公開方法
+                    <i class="fa-solid fa-circle-question text-cyan-400"></i> ゲーム仕様 & AR機能について
                 </h3>
                 <button id="closeInfoBtn" class="text-slate-400 hover:text-white p-1">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
 
-            <!-- Tabs / Rules Section -->
             <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                <h4 class="font-bold text-cyan-300 border-l-2 border-cyan-400 pl-2">遊び方</h4>
+                <h4 class="font-bold text-cyan-300 border-l-2 border-cyan-400 pl-2">ARカメラモードの遊び方</h4>
                 <ul class="list-disc list-inside space-y-1 text-slate-400">
-                    <li>画面内に一瞬出現する<b>「光る点」</b>を指やマウスで素早くタッチします。</li>
-                    <li>連続で成功すると<b>コンボ</b>が繋がり、スコア倍率がアップします。</li>
-                    <li>お手つき（何もない場所のタップ）やターゲットの消滅はコンボが切れる原因になります。</li>
+                    <li>カメラ許可を有効にすると、画面に映像が投影されます。</li>
+                    <li>カメラに手をかざすと<b>指先（人差し指など）にオーラエフェクト</b>が表示されます。</li>
+                    <li>指先を画面内の<b>光る点に重ねる</b>と消去できます！</li>
+                    <li>マウスやスマホ画面の直接タップでもいつでもプレイ可能です。</li>
                 </ul>
 
-                <h4 class="font-bold text-fuchsia-300 border-l-2 border-fuchsia-400 pl-2 mt-4">GitHub Pagesで即時無料公開する手順</h4>
+                <h4 class="font-bold text-fuchsia-300 border-l-2 border-fuchsia-400 pl-2 mt-4">GitHub Pages公開手順</h4>
                 <ol class="list-decimal list-inside space-y-1 text-slate-400 font-mono text-[11px] sm:text-xs">
-                    <li>GitHubで新規リポジトリを作成（例: <code class="text-cyan-400">dynamic-vision-game</code>）</li>
-                    <li>このコードを <code class="text-cyan-400">index.html</code> という名前で保存してコミット&プッシュ</li>
-                    <li>リポジトリの <b>Settings &gt; Pages</b> を開く</li>
-                    <li>Source を <b>Deploy from a branch</b> に設定し、<code class="text-cyan-400">main</code> (または <code class="text-cyan-400">master</code>) ブランチを選択して Save</li>
-                    <li>数分後に発行されるURLにアクセスするだけで誰でもWebでプレイ可能！</li>
+                    <li>このファイルを <code class="text-cyan-400">index.html</code> としてリポジトリに保存</li>
+                    <li>GitHub リポジトリの <b>Settings &gt; Pages</b> を開く</li>
+                    <li>Source を <b>Deploy from a branch</b> にし、<code class="text-cyan-400">main</code> を選択</li>
+                    <li>発行されたHTTPS対応URLからアクセス（カメラ利用にはHTTPS接続が必須です）</li>
                 </ol>
             </div>
 
@@ -312,7 +340,6 @@
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 
-                // Base frequency rises with combo count
                 const baseFreq = 440;
                 const freq = baseFreq * Math.pow(1.05, Math.min(combo, 20));
 
@@ -358,7 +385,7 @@
                 if (!this.ctx) return;
 
                 const now = this.ctx.currentTime;
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                const notes = [523.25, 659.25, 783.99, 1046.50];
 
                 notes.forEach((freq, idx) => {
                     const osc = this.ctx.createOscillator();
@@ -384,26 +411,23 @@
                 this.x = x;
                 this.y = y;
                 this.radius = radius;
-                this.maxDuration = duration; // in ms
+                this.maxDuration = duration;
                 this.remaining = duration;
                 this.spawnTime = performance.now();
-                this.isHit = false;
-                this.hue = Math.floor(Math.random() * 60) + 170; // Cyan to Purple range
+                this.hue = Math.floor(Math.random() * 60) + 170; // Cyan-Purple range
             }
 
             draw(ctx) {
                 const progress = this.remaining / this.maxDuration;
-                const currentRadius = this.radius * Math.sin(Math.PI * (1 - progress * 0.1)); // slight pulse
+                const currentRadius = this.radius * Math.sin(Math.PI * (1 - progress * 0.1));
 
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, Math.max(1, currentRadius), 0, Math.PI * 2);
 
-                // Outer Glow
                 ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.8)`;
-                ctx.shadowBlur = 20;
+                ctx.shadowBlur = 25;
 
-                // Gradient Fill
                 const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, currentRadius));
                 grad.addColorStop(0, '#ffffff');
                 grad.addColorStop(0.4, `hsl(${this.hue}, 100%, 75%)`);
@@ -414,9 +438,9 @@
 
                 // Inner ring duration indicator
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, currentRadius + 4, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
-                ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, 0.6)`;
-                ctx.lineWidth = 2.5;
+                ctx.arc(this.x, this.y, currentRadius + 5, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
+                ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, 0.7)`;
+                ctx.lineWidth = 3;
                 ctx.stroke();
 
                 ctx.restore();
@@ -429,8 +453,8 @@
                 this.y = y;
                 this.hue = hue;
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 6 + 2;
-                this.friction = 0.94;
+                this.speed = Math.random() * 7 + 2;
+                this.friction = 0.93;
                 this.alpha = 1;
                 this.decay = Math.random() * 0.03 + 0.02;
                 this.radius = Math.random() * 3 + 2;
@@ -450,7 +474,7 @@
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
                 ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10;
                 ctx.fill();
                 ctx.restore();
             }
@@ -460,25 +484,25 @@
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
+                this.video = document.getElementById('webcam');
                 this.sound = new SoundEngine();
 
-                // Game Config Presets
+                // Difficulty Configurations
                 this.diffConfig = {
-                    easy: { radius: 36, duration: 1800, spawnInterval: 900 },
-                    normal: { radius: 26, duration: 1200, spawnInterval: 650 },
-                    hard: { radius: 18, duration: 800, spawnInterval: 450 }
+                    easy: { radius: 38, duration: 2000, spawnInterval: 950 },
+                    normal: { radius: 28, duration: 1300, spawnInterval: 680 },
+                    hard: { radius: 20, duration: 850, spawnInterval: 480 }
                 };
 
-                // Mode descriptions
                 this.modeDescriptions = {
-                    time: "制限時間30秒以内に、現れる光の点を何回タップできるか競います。",
+                    time: "制限時間30秒以内に、現れる光の点を何回タッチできるか競います。",
                     count: "30個のターゲットをすべて消去するまでのタイム（秒）を測定します。",
                     survival: "ライフ3点。ターゲットを逃すかお手つきするとライフ減少。どこまで耐えられるか挑戦！"
                 };
 
-                // State variables
-                this.mode = 'time'; // time, count, survival
+                this.mode = 'time';
                 this.difficulty = 'normal';
+                this.useAR = true;
                 this.isPlaying = false;
 
                 this.score = 0;
@@ -491,20 +515,27 @@
                 this.lives = 3;
 
                 this.timeLeft = 30.0;
-                this.targetsCount = 0; // For count mode
+                this.targetsCount = 0;
                 this.maxTargetsCount = 30;
 
                 this.targets = [];
                 this.particles = [];
+                this.detectedHandPoints = []; // Hand landmark coordinates [{x, y}]
+
                 this.lastSpawnTime = 0;
                 this.lastFrameTime = 0;
                 this.animFrameId = null;
 
-                // Best Scores Storage Key
+                // MediaPipe Hands setup
+                this.handsDetector = null;
+                this.isProcessingHand = false;
+                this.cameraStream = null;
+
                 this.storageKey = 'flash_reflex_bests';
                 this.bestScores = this.loadBestScores();
 
                 this.initUI();
+                this.initMediaPipe();
                 this.resizeCanvas();
                 window.addEventListener('resize', () => this.resizeCanvas());
             }
@@ -522,15 +553,9 @@
                 const key = `${this.mode}_${this.difficulty}`;
                 const current = this.bestScores[key] || 0;
                 if (this.mode === 'count') {
-                    // For time-based, lower is better
-                    if (current === 0 || val < current) {
-                        this.bestScores[key] = val;
-                    }
+                    if (current === 0 || val < current) this.bestScores[key] = val;
                 } else {
-                    // For score-based, higher is better
-                    if (val > current) {
-                        this.bestScores[key] = val;
-                    }
+                    if (val > current) this.bestScores[key] = val;
                 }
                 try {
                     localStorage.setItem(this.storageKey, JSON.stringify(this.bestScores));
@@ -557,8 +582,105 @@
                 }
             }
 
+            initMediaPipe() {
+                if (typeof Hands === 'undefined') return;
+
+                this.handsDetector = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+                });
+
+                this.handsDetector.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                this.handsDetector.onResults((results) => this.onHandResults(results));
+            }
+
+            async startCamera() {
+                if (!this.useAR) return;
+
+                try {
+                    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    });
+                    this.video.srcObject = this.cameraStream;
+                    await this.video.play();
+                } catch (err) {
+                    console.warn("Camera access denied or unavailable:", err);
+                    this.useAR = false;
+                    document.getElementById('arToggle').checked = false;
+                }
+            }
+
+            stopCamera() {
+                if (this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(track => track.stop());
+                    this.cameraStream = null;
+                }
+                this.isProcessingHand = false;
+            }
+
+            onHandResults(results) {
+                this.detectedHandPoints = [];
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const badge = document.getElementById('handStatusBadge');
+                    const badgeText = document.getElementById('handStatusText');
+                    badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 pulse-glow";
+                    badgeText.textContent = "✋ 手を認識中";
+
+                    for (const landmarks of results.multiHandLandmarks) {
+                        // Key touch fingertips (Landmark 8 = Index Finger Tip, 4 = Thumb Tip, 12 = Middle Tip)
+                        const keyIndices = [8, 12, 4];
+                        
+                        keyIndices.forEach((idx) => {
+                            const lm = landmarks[idx];
+                            // Mirror coordinate calculation for front camera intuitiveness
+                            const x = (1 - lm.x) * this.canvas.width;
+                            const y = lm.y * this.canvas.height;
+                            
+                            this.detectedHandPoints.push({
+                                x: x,
+                                y: y,
+                                isIndex: idx === 8
+                            });
+
+                            // Check interaction hit with targets
+                            if (this.isPlaying) {
+                                this.checkHandCollision(x, y);
+                            }
+                        });
+                    }
+                } else {
+                    const badge = document.getElementById('handStatusBadge');
+                    const badgeText = document.getElementById('handStatusText');
+                    badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40";
+                    badgeText.textContent = "🔍 手をカメラにかざしてください";
+                }
+            }
+
+            checkHandCollision(x, y) {
+                for (let i = this.targets.length - 1; i >= 0; i--) {
+                    const t = this.targets[i];
+                    const dist = Math.hypot(t.x - x, t.y - y);
+
+                    // Touch detection threshold
+                    if (dist <= t.radius + 16) {
+                        this.processHit(i, t);
+                        break;
+                    }
+                }
+            }
+
             initUI() {
-                // Mode Switch Buttons
+                // Mode Select
                 document.querySelectorAll('.mode-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.mode-btn').forEach(b => {
@@ -575,7 +697,7 @@
                     });
                 });
 
-                // Difficulty Buttons
+                // Difficulty Select
                 document.querySelectorAll('.diff-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.diff-btn').forEach(b => {
@@ -591,6 +713,11 @@
                     });
                 });
 
+                // AR Mode Toggle
+                document.getElementById('arToggle').addEventListener('change', (e) => {
+                    this.useAR = e.target.checked;
+                });
+
                 // Sound Toggle
                 document.getElementById('soundToggleBtn').addEventListener('click', () => {
                     this.sound.muted = !this.sound.muted;
@@ -602,7 +729,7 @@
                     }
                 });
 
-                // Info Modal Toggle
+                // Info Modals
                 document.getElementById('infoModalBtn').addEventListener('click', () => {
                     document.getElementById('infoModal').classList.remove('hidden');
                 });
@@ -613,12 +740,12 @@
                     document.getElementById('infoModal').classList.add('hidden');
                 });
 
-                // Game Control Buttons
+                // Control Buttons
                 document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('menuBtn').addEventListener('click', () => this.showStartScreen());
 
-                // Canvas Click/Touch Input Handler
+                // Fallback Direct Screen Pointer Handler
                 const handlePointer = (e) => {
                     if (!this.isPlaying) return;
                     e.preventDefault();
@@ -642,17 +769,26 @@
             showStartScreen() {
                 this.isPlaying = false;
                 if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+                this.stopCamera();
 
                 document.getElementById('startScreen').classList.remove('hidden');
                 document.getElementById('gameScreen').classList.add('hidden');
                 document.getElementById('resultScreen').classList.add('hidden');
             }
 
-            startGame() {
+            async startGame() {
                 this.sound.init();
+
+                // Start Camera for AR
+                if (this.useAR) {
+                    await this.startCamera();
+                } else {
+                    this.stopCamera();
+                }
+
                 this.isPlaying = true;
 
-                // Reset stats
+                // Reset Statistics
                 this.score = 0;
                 this.combo = 0;
                 this.maxCombo = 0;
@@ -669,12 +805,11 @@
                 this.lastFrameTime = performance.now();
                 this.lastSpawnTime = performance.now();
 
-                // UI setup for current mode
+                // UI Setup
                 document.getElementById('startScreen').classList.add('hidden');
                 document.getElementById('resultScreen').classList.add('hidden');
                 document.getElementById('gameScreen').classList.remove('hidden');
 
-                // 表示状態になった後に正確なキャンバスサイズを確定する
                 this.resizeCanvas();
 
                 const label1 = document.getElementById('statLabel1');
@@ -694,16 +829,14 @@
                 this.updateHUD();
                 this.spawnTarget();
 
-                // Start game loop
                 if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
                 this.animFrameId = requestAnimationFrame((now) => this.loop(now));
             }
 
             spawnTarget() {
                 const conf = this.diffConfig[this.difficulty];
-                const padding = conf.radius + 30;
+                const padding = conf.radius + 35;
 
-                // キャンバスサイズが確定していない場合のセーフティガード
                 const minWidth = padding * 2 + 50;
                 const minHeight = padding * 2 + 50;
                 const width = Math.max(this.canvas.width || 0, minWidth);
@@ -718,47 +851,49 @@
                 this.targets.push(new Target(x, y, conf.radius, conf.duration));
             }
 
+            processHit(targetIndex, t) {
+                const now = performance.now();
+                this.hits++;
+                this.totalClicks++;
+                this.combo++;
+                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                const rxTime = Math.round(now - t.spawnTime);
+                this.reactionTimes.push(rxTime);
+                document.getElementById('recentReaction').textContent = `${rxTime} ms`;
+
+                const basePoints = 100;
+                const comboBonus = Math.min(this.combo * 10, 200);
+                this.score += basePoints + comboBonus;
+
+                this.sound.playHit(this.combo);
+                this.createBurst(t.x, t.y, t.hue);
+
+                this.targets.splice(targetIndex, 1);
+
+                if (this.mode === 'count') {
+                    this.targetsCount++;
+                    if (this.targetsCount >= this.maxTargetsCount) {
+                        this.endGame();
+                        return;
+                    }
+                }
+
+                this.spawnTarget();
+                this.updateHUD();
+            }
+
             processTap(x, y) {
                 this.totalClicks++;
                 let hitAny = false;
-                const now = performance.now();
 
                 for (let i = this.targets.length - 1; i >= 0; i--) {
                     const t = this.targets[i];
                     const dist = Math.hypot(t.x - x, t.y - y);
 
-                    if (dist <= t.radius + 12) { // Slightly forgiving touch radius
+                    if (dist <= t.radius + 12) {
                         hitAny = true;
-                        this.hits++;
-                        this.combo++;
-                        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-
-                        // Calculate reaction time in ms
-                        const rxTime = Math.round(now - t.spawnTime);
-                        this.reactionTimes.push(rxTime);
-                        document.getElementById('recentReaction').textContent = `${rxTime} ms`;
-
-                        // Score calculation
-                        const basePoints = 100;
-                        const comboBonus = Math.min(this.combo * 10, 200);
-                        this.score += basePoints + comboBonus;
-
-                        this.sound.playHit(this.combo);
-                        this.createBurst(t.x, t.y, t.hue);
-
-                        // Remove target
-                        this.targets.splice(i, 1);
-
-                        if (this.mode === 'count') {
-                            this.targetsCount++;
-                            if (this.targetsCount >= this.maxTargetsCount) {
-                                this.endGame();
-                                return;
-                            }
-                        }
-
-                        // Immediate spawn new target
-                        this.spawnTarget();
+                        this.processHit(i, t);
                         break;
                     }
                 }
@@ -781,7 +916,7 @@
             }
 
             createBurst(x, y, hue) {
-                for (let i = 0; i < 16; i++) {
+                for (let i = 0; i < 18; i++) {
                     this.particles.push(new Particle(x, y, hue));
                 }
             }
@@ -792,10 +927,42 @@
                 const dt = (now - this.lastFrameTime) / 1000;
                 this.lastFrameTime = now;
 
-                // Clear Canvas
+                // MediaPipe frame processing (Throttled & guarded to prevent WASM memory collision)
+                if (this.useAR && this.handsDetector && this.video.readyState >= 2 && !this.isProcessingHand) {
+                    this.isProcessingHand = true;
+                    this.handsDetector.send({ image: this.video })
+                        .catch(() => {})
+                        .finally(() => {
+                            this.isProcessingHand = false;
+                        });
+                }
+
+                // Render Background (AR video stream or dark gradient background)
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Mode specific time updates
+                if (this.useAR && this.video.readyState >= 2) {
+                    this.ctx.save();
+                    // Mirror video feed horizontally for AR
+                    this.ctx.translate(this.canvas.width, 0);
+                    this.ctx.scale(-1, 1);
+                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Dark semi-transparent overlay for visual clarity
+                    this.ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.restore();
+                } else {
+                    const bgGrad = this.ctx.createRadialGradient(
+                        this.canvas.width / 2, this.canvas.height / 2, 10,
+                        this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+                    );
+                    bgGrad.addColorStop(0, '#0f172a');
+                    bgGrad.addColorStop(1, '#020617');
+                    this.ctx.fillStyle = bgGrad;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+
+                // Time Updates
                 if (this.mode === 'time') {
                     this.timeLeft -= dt;
                     if (this.timeLeft <= 0) {
@@ -804,26 +971,23 @@
                         this.endGame();
                         return;
                     }
-                } else if (this.mode === 'count') {
-                    this.timeLeft += dt;
-                } else if (this.mode === 'survival') {
+                } else if (this.mode === 'count' || this.mode === 'survival') {
                     this.timeLeft += dt;
                 }
 
-                // Auto Spawn Target logic if none exist or interval passed
+                // Spawn Target logic
                 const conf = this.diffConfig[this.difficulty];
                 if (this.targets.length === 0 || (now - this.lastSpawnTime > conf.spawnInterval && this.targets.length < 2)) {
                     this.spawnTarget();
                     this.lastSpawnTime = now;
                 }
 
-                // Update & Draw Targets
+                // Draw Targets
                 for (let i = this.targets.length - 1; i >= 0; i--) {
                     const t = this.targets[i];
                     t.remaining -= dt * 1000;
 
                     if (t.remaining <= 0) {
-                        // Target expired
                         this.targets.splice(i, 1);
                         this.combo = 0;
 
@@ -840,7 +1004,10 @@
                     }
                 }
 
-                // Update & Draw Particles
+                // Render Hand Tracking Neon Effects
+                this.drawHandEffects();
+
+                // Draw Burst Particles
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
                     p.update();
@@ -853,6 +1020,37 @@
 
                 this.updateHUD();
                 this.animFrameId = requestAnimationFrame((timestamp) => this.loop(timestamp));
+            }
+
+            drawHandEffects() {
+                if (!this.detectedHandPoints || this.detectedHandPoints.length === 0) return;
+
+                this.detectedHandPoints.forEach(pt => {
+                    this.ctx.save();
+                    
+                    // Glowing outer aura
+                    this.ctx.beginPath();
+                    this.ctx.arc(pt.x, pt.y, pt.isIndex ? 22 : 14, 0, Math.PI * 2);
+                    this.ctx.fillStyle = pt.isIndex ? 'rgba(6, 182, 212, 0.25)' : 'rgba(236, 72, 153, 0.25)';
+                    this.ctx.fill();
+
+                    // Laser Core Ring
+                    this.ctx.beginPath();
+                    this.ctx.arc(pt.x, pt.y, pt.isIndex ? 12 : 8, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = pt.isIndex ? '#38bdf8' : '#f472b6';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.shadowColor = pt.isIndex ? '#06b6d4' : '#ec4899';
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.stroke();
+
+                    // Inner bright white center dot
+                    this.ctx.beginPath();
+                    this.ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fill();
+
+                    this.ctx.restore();
+                });
             }
 
             updateHUD() {
@@ -870,7 +1068,6 @@
                     val2.textContent = '❤️'.repeat(Math.max(0, this.lives));
                 }
 
-                // Combo Indicator
                 const comboContainer = document.getElementById('comboContainer');
                 const comboText = document.getElementById('comboText');
 
@@ -885,10 +1082,10 @@
             endGame() {
                 this.isPlaying = false;
                 if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+                this.stopCamera();
 
                 this.sound.playFinish();
 
-                // Compute Stats
                 const avgRxTime = this.reactionTimes.length > 0 
                     ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
                     : 0;
@@ -897,18 +1094,15 @@
                     ? Math.round((this.hits / this.totalClicks) * 100)
                     : 0;
 
-                // Rank & Evaluation Logic
                 let rank = 'C';
                 let rankTitle = 'トレーニングを続けましょう';
 
                 if (this.mode === 'count') {
-                    // Time based evaluation
                     if (this.timeLeft <= 15.0) { rank = 'S+'; rankTitle = '神の動体視力'; }
                     else if (this.timeLeft <= 18.0) { rank = 'S'; rankTitle = 'アスリート級'; }
                     else if (this.timeLeft <= 22.0) { rank = 'A'; rankTitle = 'プロゲーマー級'; }
                     else if (this.timeLeft <= 28.0) { rank = 'B'; rankTitle = '平均以上'; }
                 } else {
-                    // Reaction & Score based
                     if (avgRxTime > 0 && avgRxTime <= 280 && accuracy >= 90) {
                         rank = 'S+'; rankTitle = '神の動体視力';
                     } else if (avgRxTime <= 340 && accuracy >= 80) {
@@ -920,11 +1114,9 @@
                     }
                 }
 
-                // Save Best Score
                 const finalMetric = this.mode === 'count' ? this.timeLeft : this.score;
                 this.saveBestScore(finalMetric);
 
-                // Populate Result Modal
                 document.getElementById('resultRank').textContent = `RANK ${rank}`;
                 document.getElementById('resultRankTitle').textContent = rankTitle;
 
@@ -938,7 +1130,6 @@
                 document.getElementById('resultAccuracy').textContent = `${accuracy}%`;
                 document.getElementById('resultMaxCombo').textContent = this.maxCombo;
 
-                // UI Transition
                 document.getElementById('gameScreen').classList.add('hidden');
                 document.getElementById('resultScreen').classList.remove('hidden');
             }
