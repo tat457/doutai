@@ -800,20 +800,32 @@
                 const scoreVal = this.mode === 'count' ? this.timeLeft : this.score;
                 this.saveBestScore(scoreVal);
 
+                // --- ランク判定ロジックの刷新（反応時間と正確性を重視） ---
                 let rank = 'C';
                 let rankTitle = 'トレーニングが必要';
-                if (this.mode === 'time') {
-                    if (this.score >= 40) { rank = 'S'; rankTitle = '神の動体視力'; }
-                    else if (this.score >= 30) { rank = 'A'; rankTitle = 'プロ級の動体視力'; }
-                    else if (this.score >= 20) { rank = 'B'; rankTitle = 'アスリート級'; }
-                } else if (this.mode === 'count') {
-                    if (scoreVal <= 12) { rank = 'S'; rankTitle = '神の反応速度'; }
-                    else if (scoreVal <= 18) { rank = 'A'; rankTitle = '超高音速タップ'; }
-                    else if (scoreVal <= 25) { rank = 'B'; rankTitle = '上級者'; }
-                } else {
-                    if (this.score >= 35) { rank = 'S'; rankTitle = 'サバイバルマスター'; }
-                    else if (this.score >= 20) { rank = 'A'; rankTitle = '不屈の反射神経'; }
-                    else if (this.score >= 10) { rank = 'B'; rankTitle = '見切り上手'; }
+
+                if (this.hits > 0) {
+                    // 反応速度(ms) と 正確性(%) による fair な基準
+                    if (avgReact <= 320 && accuracy >= 85) {
+                        rank = 'S';
+                        rankTitle = '神の動体視力';
+                    } else if (avgReact <= 420 && accuracy >= 75) {
+                        rank = 'A';
+                        rankTitle = 'プロ級の動体視力';
+                    } else if (avgReact <= 580 && accuracy >= 60) {
+                        rank = 'B';
+                        rankTitle = 'アスリート級';
+                    } else {
+                        rank = 'C';
+                        rankTitle = '見習いレベル';
+                    }
+
+                    // HARDモードでの優秀なプレイにはランク昇格ボーナス
+                    if (rank !== 'S' && this.difficulty === 'hard' && accuracy >= 80 && avgReact <= 480) {
+                        if (rank === 'A') rank = 'S';
+                        else if (rank === 'B') rank = 'A';
+                        else if (rank === 'C') rank = 'B';
+                    }
                 }
 
                 document.getElementById('resultRank').textContent = `RANK ${rank}`;
