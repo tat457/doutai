@@ -31,7 +31,7 @@
 
         /* Glassmorphism effects */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
@@ -118,6 +118,11 @@
     <!-- Main Content Container -->
     <main class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden">
 
+        <!-- Toast Notification Message -->
+        <div id="toastMessage" class="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-amber-500/90 text-slate-950 font-bold text-xs shadow-lg transition-all opacity-0 pointer-events-none transform -translate-y-2">
+            通知メッセージ
+        </div>
+
         <!-- 1. START SCREEN -->
         <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800">
             <div class="text-center space-y-2">
@@ -186,7 +191,7 @@
             </div>
 
             <!-- Start Button -->
-            <button id="startGameBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-slate-950 font-black text-lg shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+            <button id="startGameBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-slate-950 font-black text-lg shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fa-solid fa-play"></i> START GAME
             </button>
         </div>
@@ -232,7 +237,7 @@
         </div>
 
         <!-- 3. RESULT MODAL / SCREEN -->
-        <div id="resultScreen" class="hidden w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-30 shadow-2xl shadow-cyan-950/50 border border-slate-800 animate-fade-in">
+        <div id="resultScreen" class="hidden w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-30 shadow-2xl shadow-cyan-950/50 border border-slate-800">
             <div class="text-center space-y-1">
                 <span class="text-xs font-bold uppercase tracking-widest text-slate-400">FINISH!</span>
                 <h2 class="text-3xl font-black text-white font-outfit">PERFORMANCE</h2>
@@ -295,7 +300,7 @@
                     <li>カメラ許可を有効にすると、画面に映像が投影されます。</li>
                     <li>カメラに手をかざすと<b>指先（人差し指など）にオーラエフェクト</b>が表示されます。</li>
                     <li>指先を画面内の<b>光る点に重ねる</b>と消去できます！</li>
-                    <li>マウスやスマホ画面の直接タップでもいつでもプレイ可能です。</li>
+                    <li>画面を直接タップ（クリック）してもいつでもプレイ可能です。</li>
                 </ul>
 
                 <h4 class="font-bold text-fuchsia-300 border-l-2 border-fuchsia-400 pl-2 mt-4">GitHub Pages公開手順</h4>
@@ -321,14 +326,18 @@
             }
 
             init() {
-                if (!this.ctx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContext) {
-                        this.ctx = new AudioContext();
+                try {
+                    if (!this.ctx) {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContext) {
+                            this.ctx = new AudioContext();
+                        }
                     }
-                }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
+                    if (this.ctx && this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                } catch (e) {
+                    console.warn("AudioContext init error:", e);
                 }
             }
 
@@ -337,24 +346,26 @@
                 this.init();
                 if (!this.ctx) return;
 
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                
-                const baseFreq = 440;
-                const freq = baseFreq * Math.pow(1.05, Math.min(combo, 20));
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    const baseFreq = 440;
+                    const freq = baseFreq * Math.pow(1.05, Math.min(combo, 20));
 
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(freq * 1.5, this.ctx.currentTime + 0.08);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, this.ctx.currentTime + 0.08);
 
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
 
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
 
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch (e) {}
             }
 
             playMiss() {
@@ -362,21 +373,23 @@
                 this.init();
                 if (!this.ctx) return;
 
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
 
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
-                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.15);
 
-                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
 
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
 
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.15);
+                } catch (e) {}
             }
 
             playFinish() {
@@ -384,25 +397,27 @@
                 this.init();
                 if (!this.ctx) return;
 
-                const now = this.ctx.currentTime;
-                const notes = [523.25, 659.25, 783.99, 1046.50];
+                try {
+                    const now = this.ctx.currentTime;
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
 
-                notes.forEach((freq, idx) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
 
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
 
-                    gain.gain.setValueAtTime(0.25, now + idx * 0.08);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                        gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
 
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
 
-                    osc.start(now + idx * 0.08);
-                    osc.stop(now + idx * 0.08 + 0.3);
-                });
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.3);
+                    });
+                } catch (e) {}
             }
         }
 
@@ -418,7 +433,7 @@
             }
 
             draw(ctx) {
-                const progress = this.remaining / this.maxDuration;
+                const progress = Math.max(0, this.remaining / this.maxDuration);
                 const currentRadius = this.radius * Math.sin(Math.PI * (1 - progress * 0.1));
 
                 ctx.save();
@@ -520,7 +535,7 @@
 
                 this.targets = [];
                 this.particles = [];
-                this.detectedHandPoints = []; // Hand landmark coordinates [{x, y}]
+                this.detectedHandPoints = [];
 
                 this.lastSpawnTime = 0;
                 this.lastFrameTime = 0;
@@ -538,6 +553,18 @@
                 this.initMediaPipe();
                 this.resizeCanvas();
                 window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            showToast(msg) {
+                const toast = document.getElementById('toastMessage');
+                if (!toast) return;
+                toast.textContent = msg;
+                toast.classList.remove('opacity-0', '-translate-y-2', 'pointer-events-none');
+                toast.classList.add('opacity-100', 'translate-y-0');
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', '-translate-y-2', 'pointer-events-none');
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                }, 3000);
             }
 
             loadBestScores() {
@@ -577,347 +604,322 @@
             resizeCanvas() {
                 const rect = this.canvas.parentElement.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
-                    this.canvas.width = rect.width;
-                    this.canvas.height = rect.height;
+                    this.canvas.width = Math.floor(rect.width);
+                    this.canvas.height = Math.floor(rect.height);
+                } else {
+                    this.canvas.width = Math.max(300, window.innerWidth);
+                    this.canvas.height = Math.max(400, window.innerHeight - 100);
                 }
             }
 
             initMediaPipe() {
                 if (typeof Hands === 'undefined') return;
 
-                this.handsDetector = new Hands({
-                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
-                });
+                try {
+                    this.handsDetector = new Hands({
+                        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+                    });
 
-                this.handsDetector.setOptions({
-                    maxNumHands: 2,
-                    modelComplexity: 1,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
+                    this.handsDetector.setOptions({
+                        maxNumHands: 2,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.5,
+                        minTrackingConfidence: 0.5
+                    });
 
-                this.handsDetector.onResults((results) => this.onHandResults(results));
+                    this.handsDetector.onResults((results) => this.onHandResults(results));
+                } catch (e) {
+                    console.warn("MediaPipe init failed:", e);
+                }
             }
 
             async startCamera() {
-                if (!this.useAR) return;
+                if (!this.useAR) return false;
+
+                // Check mediaDevices support
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    console.warn("Webcam not supported in this environment");
+                    this.useAR = false;
+                    document.getElementById('arToggle').checked = false;
+                    this.showToast("カメラ非対応環境のためタップモードに変更しました");
+                    return false;
+                }
+
+                if (this.cameraStream && this.cameraStream.active && !this.video.paused && this.video.readyState >= 2) {
+                    return true;
+                }
+
+                this.stopCamera();
 
                 try {
-                    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                    // Promise with 3s timeout to prevent hanging on permission prompt
+                    const cameraPromise = navigator.mediaDevices.getUserMedia({
                         video: {
                             facingMode: 'user',
                             width: { ideal: 1280 },
                             height: { ideal: 720 }
                         }
                     });
+
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("Camera connection timeout")), 3000)
+                    );
+
+                    this.cameraStream = await Promise.race([cameraPromise, timeoutPromise]);
                     this.video.srcObject = this.cameraStream;
                     await this.video.play();
+                    return true;
                 } catch (err) {
-                    console.warn("Camera access denied or unavailable:", err);
+                    console.warn("Camera access denied or timed out:", err);
                     this.useAR = false;
                     document.getElementById('arToggle').checked = false;
+                    this.showToast("カメラを使用できないためタップモードで開始します");
+                    return false;
                 }
             }
 
             stopCamera() {
                 if (this.cameraStream) {
-                    this.cameraStream.getTracks().forEach(track => track.stop());
+                    try {
+                        this.cameraStream.getTracks().forEach(track => track.stop());
+                    } catch(e){}
                     this.cameraStream = null;
+                }
+                if (this.video) {
+                    try {
+                        this.video.pause();
+                        this.video.srcObject = null;
+                    } catch(e){}
                 }
                 this.isProcessingHand = false;
             }
 
             onHandResults(results) {
                 this.detectedHandPoints = [];
-
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    const badge = document.getElementById('handStatusBadge');
-                    const badgeText = document.getElementById('handStatusText');
-                    badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 pulse-glow";
-                    badgeText.textContent = "✋ 手を認識中";
-
                     for (const landmarks of results.multiHandLandmarks) {
-                        // Key touch fingertips (Landmark 8 = Index Finger Tip, 4 = Thumb Tip, 12 = Middle Tip)
-                        const keyIndices = [8, 12, 4];
-                        
-                        keyIndices.forEach((idx) => {
-                            const lm = landmarks[idx];
-                            // Mirror coordinate calculation for front camera intuitiveness
-                            const x = (1 - lm.x) * this.canvas.width;
-                            const y = lm.y * this.canvas.height;
-                            
-                            this.detectedHandPoints.push({
-                                x: x,
-                                y: y,
-                                isIndex: idx === 8
-                            });
-
-                            // Check interaction hit with targets
-                            if (this.isPlaying) {
-                                this.checkHandCollision(x, y);
-                            }
-                        });
+                        const indexTip = landmarks[8];
+                        if (indexTip) {
+                            const x = (1 - indexTip.x) * this.canvas.width;
+                            const y = indexTip.y * this.canvas.height;
+                            this.detectedHandPoints.push({ x, y });
+                        }
                     }
+                }
+                this.updateHandBadge(this.detectedHandPoints.length > 0);
+            }
+
+            updateHandBadge(detected) {
+                const badge = document.getElementById('handStatusBadge');
+                const text = document.getElementById('handStatusText');
+                if (!badge || !text) return;
+
+                if (!this.useAR) {
+                    badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-slate-800 text-slate-400 border border-slate-700";
+                    text.textContent = "タップモード";
+                } else if (detected) {
+                    badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 pulse-glow";
+                    text.textContent = "手を認識中";
                 } else {
-                    const badge = document.getElementById('handStatusBadge');
-                    const badgeText = document.getElementById('handStatusText');
                     badge.className = "px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40";
-                    badgeText.textContent = "🔍 手をカメラにかざしてください";
+                    text.textContent = "手を検索中...";
                 }
-            }
-
-            checkHandCollision(x, y) {
-                for (let i = this.targets.length - 1; i >= 0; i--) {
-                    const t = this.targets[i];
-                    const dist = Math.hypot(t.x - x, t.y - y);
-
-                    // Touch detection threshold
-                    if (dist <= t.radius + 16) {
-                        this.processHit(i, t);
-                        break;
-                    }
-                }
-            }
-
-            initUI() {
-                // Mode Select
-                document.querySelectorAll('.mode-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.mode-btn').forEach(b => {
-                            b.classList.remove('active-mode', 'border-cyan-500', 'bg-slate-800');
-                            b.classList.add('opacity-70');
-                        });
-                        const target = e.currentTarget;
-                        target.classList.add('active-mode', 'border-cyan-500', 'bg-slate-800');
-                        target.classList.remove('opacity-70');
-
-                        this.mode = target.dataset.mode;
-                        document.getElementById('modeDescription').textContent = this.modeDescriptions[this.mode];
-                        this.updateHeaderBest();
-                    });
-                });
-
-                // Difficulty Select
-                document.querySelectorAll('.diff-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.diff-btn').forEach(b => {
-                            b.classList.remove('active-diff', 'border-cyan-500', 'bg-slate-800');
-                            b.classList.add('text-slate-300');
-                        });
-                        const target = e.currentTarget;
-                        target.classList.add('active-diff', 'border-cyan-500', 'bg-slate-800');
-                        target.classList.remove('text-slate-300');
-
-                        this.difficulty = target.dataset.diff;
-                        this.updateHeaderBest();
-                    });
-                });
-
-                // AR Mode Toggle
-                document.getElementById('arToggle').addEventListener('change', (e) => {
-                    this.useAR = e.target.checked;
-                });
-
-                // Sound Toggle
-                document.getElementById('soundToggleBtn').addEventListener('click', () => {
-                    this.sound.muted = !this.sound.muted;
-                    const icon = document.getElementById('soundIcon');
-                    if (this.sound.muted) {
-                        icon.className = 'fa-solid fa-volume-xmark text-red-400';
-                    } else {
-                        icon.className = 'fa-solid fa-volume-high text-cyan-400';
-                    }
-                });
-
-                // Info Modals
-                document.getElementById('infoModalBtn').addEventListener('click', () => {
-                    document.getElementById('infoModal').classList.remove('hidden');
-                });
-                document.getElementById('closeInfoBtn').addEventListener('click', () => {
-                    document.getElementById('infoModal').classList.add('hidden');
-                });
-                document.getElementById('closeInfoModalBtn').addEventListener('click', () => {
-                    document.getElementById('infoModal').classList.add('hidden');
-                });
-
-                // Control Buttons
-                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
-                document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
-                document.getElementById('menuBtn').addEventListener('click', () => this.showStartScreen());
-
-                // Fallback Direct Screen Pointer Handler
-                const handlePointer = (e) => {
-                    if (!this.isPlaying) return;
-                    e.preventDefault();
-
-                    const rect = this.canvas.getBoundingClientRect();
-                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                    const x = clientX - rect.left;
-                    const y = clientY - rect.top;
-
-                    this.processTap(x, y);
-                };
-
-                this.canvas.addEventListener('mousedown', handlePointer);
-                this.canvas.addEventListener('touchstart', handlePointer, { passive: false });
-
-                this.updateHeaderBest();
-            }
-
-            showStartScreen() {
-                this.isPlaying = false;
-                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
-                this.stopCamera();
-
-                document.getElementById('startScreen').classList.remove('hidden');
-                document.getElementById('gameScreen').classList.add('hidden');
-                document.getElementById('resultScreen').classList.add('hidden');
             }
 
             async startGame() {
-                this.sound.init();
+                try {
+                    this.sound.init();
 
-                // Start Camera for AR
-                if (this.useAR) {
-                    await this.startCamera();
-                } else {
-                    this.stopCamera();
+                    // Instantly switch UI to game screen so dimension calculations work
+                    document.getElementById('startScreen').classList.add('hidden');
+                    document.getElementById('resultScreen').classList.add('hidden');
+                    document.getElementById('gameScreen').classList.remove('hidden');
+
+                    this.resizeCanvas();
+
+                    // Setup gameplay parameters
+                    this.isPlaying = true;
+                    this.isProcessingHand = false;
+
+                    // Reset Statistics
+                    this.score = 0;
+                    this.combo = 0;
+                    this.maxCombo = 0;
+                    this.totalClicks = 0;
+                    this.hits = 0;
+                    this.misses = 0;
+                    this.reactionTimes = [];
+                    this.lives = 3;
+                    this.targetsCount = 0;
+                    this.targets = [];
+                    this.particles = [];
+                    this.detectedHandPoints = [];
+
+                    this.timeLeft = this.mode === 'time' ? 30.0 : 0.0;
+                    this.lastSpawnTime = performance.now();
+                    this.lastFrameTime = performance.now();
+
+                    this.updateHUD();
+
+                    // Start camera in background if enabled
+                    if (this.useAR) {
+                        this.startCamera().then(() => this.updateHandBadge(false));
+                    } else {
+                        this.stopCamera();
+                        this.updateHandBadge(false);
+                    }
+
+                    // Start animation loop immediately
+                    if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = requestAnimationFrame((now) => this.loop(now));
+
+                } catch (err) {
+                    console.error("Game Start Error:", err);
+                }
+            }
+
+            endGame() {
+                this.isPlaying = false;
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = null;
                 }
 
-                this.isPlaying = true;
+                this.sound.playFinish();
 
-                // Reset Statistics
-                this.score = 0;
-                this.combo = 0;
-                this.maxCombo = 0;
-                this.totalClicks = 0;
-                this.hits = 0;
-                this.misses = 0;
-                this.reactionTimes = [];
-                this.lives = 3;
-                this.targetsCount = 0;
-                this.targets = [];
-                this.particles = [];
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('resultScreen').classList.remove('hidden');
 
-                this.timeLeft = this.mode === 'time' ? 30.0 : 0.0;
-                this.lastFrameTime = performance.now();
-                this.lastSpawnTime = performance.now();
+                const avgReact = this.reactionTimes.length > 0
+                    ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
+                    : 0;
+                const accuracy = this.totalClicks > 0
+                    ? Math.round((this.hits / this.totalClicks) * 100)
+                    : (this.hits > 0 ? 100 : 0);
 
-                // UI Setup
-                document.getElementById('startScreen').classList.add('hidden');
-                document.getElementById('resultScreen').classList.add('hidden');
-                document.getElementById('gameScreen').classList.remove('hidden');
+                const scoreVal = this.mode === 'count' ? this.timeLeft : this.score;
+                this.saveBestScore(scoreVal);
 
-                this.resizeCanvas();
-
-                const label1 = document.getElementById('statLabel1');
-                const label2 = document.getElementById('statLabel2');
-
+                let rank = 'C';
+                let rankTitle = 'トレーニングが必要';
                 if (this.mode === 'time') {
-                    label1.textContent = 'SCORE';
-                    label2.textContent = 'TIME';
+                    if (this.score >= 40) { rank = 'S'; rankTitle = '神の動体視力'; }
+                    else if (this.score >= 30) { rank = 'A'; rankTitle = 'プロ級の動体視力'; }
+                    else if (this.score >= 20) { rank = 'B'; rankTitle = 'アスリート級'; }
                 } else if (this.mode === 'count') {
-                    label1.textContent = 'REMAINING';
-                    label2.textContent = 'TIME';
-                } else if (this.mode === 'survival') {
-                    label1.textContent = 'SCORE';
-                    label2.textContent = 'LIVES';
+                    if (scoreVal <= 12) { rank = 'S'; rankTitle = '神の反応速度'; }
+                    else if (scoreVal <= 18) { rank = 'A'; rankTitle = '超高音速タップ'; }
+                    else if (scoreVal <= 25) { rank = 'B'; rankTitle = '上級者'; }
+                } else {
+                    if (this.score >= 35) { rank = 'S'; rankTitle = 'サバイバルマスター'; }
+                    else if (this.score >= 20) { rank = 'A'; rankTitle = '不屈の反射神経'; }
+                    else if (this.score >= 10) { rank = 'B'; rankTitle = '見切り上手'; }
                 }
 
-                this.updateHUD();
-                this.spawnTarget();
-
-                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
-                this.animFrameId = requestAnimationFrame((now) => this.loop(now));
+                document.getElementById('resultRank').textContent = `RANK ${rank}`;
+                document.getElementById('resultRankTitle').textContent = rankTitle;
+                document.getElementById('resultScore').textContent = this.mode === 'count' ? `${scoreVal.toFixed(1)}s` : this.score;
+                document.getElementById('resultAvgTime').textContent = `${avgReact} ms`;
+                document.getElementById('resultAccuracy').textContent = `${accuracy}%`;
+                document.getElementById('resultMaxCombo').textContent = this.maxCombo;
             }
 
             spawnTarget() {
                 const conf = this.diffConfig[this.difficulty];
-                const padding = conf.radius + 35;
+                const margin = conf.radius + 20;
 
-                const minWidth = padding * 2 + 50;
-                const minHeight = padding * 2 + 50;
-                const width = Math.max(this.canvas.width || 0, minWidth);
-                const height = Math.max(this.canvas.height || 0, minHeight);
+                const width = Math.max(200, this.canvas.width);
+                const height = Math.max(200, this.canvas.height);
 
-                const maxX = width - padding;
-                const maxY = height - padding;
-
-                const x = Math.random() * (maxX - padding) + padding;
-                const y = Math.random() * (maxY - padding) + padding;
+                const x = Math.random() * (width - margin * 2) + margin;
+                const y = Math.random() * (height - margin * 2) + margin;
 
                 this.targets.push(new Target(x, y, conf.radius, conf.duration));
+                this.targetsCount++;
             }
 
-            processHit(targetIndex, t) {
-                const now = performance.now();
+            hitTarget(index, hitX, hitY, reactTime) {
+                const target = this.targets[index];
+                this.targets.splice(index, 1);
+
                 this.hits++;
-                this.totalClicks++;
+                this.score++;
                 this.combo++;
                 if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
-                const rxTime = Math.round(now - t.spawnTime);
-                this.reactionTimes.push(rxTime);
-                document.getElementById('recentReaction').textContent = `${rxTime} ms`;
-
-                const basePoints = 100;
-                const comboBonus = Math.min(this.combo * 10, 200);
-                this.score += basePoints + comboBonus;
-
-                this.sound.playHit(this.combo);
-                this.createBurst(t.x, t.y, t.hue);
-
-                this.targets.splice(targetIndex, 1);
-
-                if (this.mode === 'count') {
-                    this.targetsCount++;
-                    if (this.targetsCount >= this.maxTargetsCount) {
-                        this.endGame();
-                        return;
-                    }
+                if (reactTime) {
+                    this.reactionTimes.push(reactTime);
+                    document.getElementById('recentReaction').textContent = `${Math.round(reactTime)} ms`;
                 }
 
-                this.spawnTarget();
+                this.sound.playHit(this.combo);
+
+                // Particle burst
+                for (let i = 0; i < 18; i++) {
+                    this.particles.push(new Particle(hitX, hitY, target.hue));
+                }
+
+                this.updateHUD();
+
+                if (this.mode === 'count' && this.hits >= this.maxTargetsCount) {
+                    this.endGame();
+                }
+            }
+
+            missTarget() {
+                this.misses++;
+                this.combo = 0;
+                this.sound.playMiss();
+
+                if (this.mode === 'survival') {
+                    this.lives--;
+                    if (this.lives <= 0) {
+                        this.endGame();
+                    }
+                }
                 this.updateHUD();
             }
 
-            processTap(x, y) {
-                this.totalClicks++;
-                let hitAny = false;
+            handleCanvasClick(e) {
+                if (!this.isPlaying) return;
 
+                const rect = this.canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                this.totalClicks++;
+
+                let hitIndex = -1;
                 for (let i = this.targets.length - 1; i >= 0; i--) {
                     const t = this.targets[i];
-                    const dist = Math.hypot(t.x - x, t.y - y);
-
-                    if (dist <= t.radius + 12) {
-                        hitAny = true;
-                        this.processHit(i, t);
+                    const dist = Math.hypot(clickX - t.x, clickY - t.y);
+                    if (dist <= t.radius + 15) {
+                        hitIndex = i;
+                        const reactTime = performance.now() - t.spawnTime;
+                        this.hitTarget(i, t.x, t.y, reactTime);
                         break;
                     }
                 }
 
-                if (!hitAny) {
-                    this.misses++;
-                    this.combo = 0;
-                    this.sound.playMiss();
-
-                    if (this.mode === 'survival') {
-                        this.lives--;
-                        if (this.lives <= 0) {
-                            this.endGame();
-                            return;
-                        }
-                    }
+                if (hitIndex === -1) {
+                    this.missTarget();
                 }
-
-                this.updateHUD();
             }
 
-            createBurst(x, y, hue) {
-                for (let i = 0; i < 18; i++) {
-                    this.particles.push(new Particle(x, y, hue));
+            checkHandHits() {
+                if (!this.isPlaying || this.detectedHandPoints.length === 0) return;
+
+                for (const pt of this.detectedHandPoints) {
+                    for (let i = this.targets.length - 1; i >= 0; i--) {
+                        const t = this.targets[i];
+                        const dist = Math.hypot(pt.x - t.x, pt.y - t.y);
+                        if (dist <= t.radius + 25) {
+                            const reactTime = performance.now() - t.spawnTime;
+                            this.totalClicks++;
+                            this.hitTarget(i, t.x, t.y, reactTime);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -927,42 +929,7 @@
                 const dt = (now - this.lastFrameTime) / 1000;
                 this.lastFrameTime = now;
 
-                // MediaPipe frame processing (Throttled & guarded to prevent WASM memory collision)
-                if (this.useAR && this.handsDetector && this.video.readyState >= 2 && !this.isProcessingHand) {
-                    this.isProcessingHand = true;
-                    this.handsDetector.send({ image: this.video })
-                        .catch(() => {})
-                        .finally(() => {
-                            this.isProcessingHand = false;
-                        });
-                }
-
-                // Render Background (AR video stream or dark gradient background)
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-                if (this.useAR && this.video.readyState >= 2) {
-                    this.ctx.save();
-                    // Mirror video feed horizontally for AR
-                    this.ctx.translate(this.canvas.width, 0);
-                    this.ctx.scale(-1, 1);
-                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-                    
-                    // Dark semi-transparent overlay for visual clarity
-                    this.ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                    this.ctx.restore();
-                } else {
-                    const bgGrad = this.ctx.createRadialGradient(
-                        this.canvas.width / 2, this.canvas.height / 2, 10,
-                        this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
-                    );
-                    bgGrad.addColorStop(0, '#0f172a');
-                    bgGrad.addColorStop(1, '#020617');
-                    this.ctx.fillStyle = bgGrad;
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                }
-
-                // Time Updates
+                // Handle Timer
                 if (this.mode === 'time') {
                     this.timeLeft -= dt;
                     if (this.timeLeft <= 0) {
@@ -971,172 +938,212 @@
                         this.endGame();
                         return;
                     }
-                } else if (this.mode === 'count' || this.mode === 'survival') {
+                } else if (this.mode === 'count') {
                     this.timeLeft += dt;
                 }
 
-                // Spawn Target logic
-                const conf = this.diffConfig[this.difficulty];
-                if (this.targets.length === 0 || (now - this.lastSpawnTime > conf.spawnInterval && this.targets.length < 2)) {
-                    this.spawnTarget();
-                    this.lastSpawnTime = now;
+                // MediaPipe processing lock
+                if (this.useAR && this.handsDetector && this.video.readyState >= 2 && !this.video.paused && this.video.videoWidth > 0 && !this.isProcessingHand) {
+                    this.isProcessingHand = true;
+                    this.handsDetector.send({ image: this.video })
+                        .catch((err) => {
+                            console.warn("Hand tracking frame error:", err);
+                        })
+                        .finally(() => {
+                            this.isProcessingHand = false;
+                        });
                 }
 
-                // Draw Targets
+                // Render Background
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (this.useAR && this.video.readyState >= 2 && !this.video.paused && this.video.videoWidth > 0) {
+                    this.ctx.save();
+                    this.ctx.translate(this.canvas.width, 0);
+                    this.ctx.scale(-1, 1);
+                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    this.ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.restore();
+                } else {
+                    const bgGrad = this.ctx.createRadialGradient(
+                        this.canvas.width / 2, this.canvas.height / 2, 50,
+                        this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+                    );
+                    bgGrad.addColorStop(0, '#0f172a');
+                    bgGrad.addColorStop(1, '#020617');
+                    this.ctx.fillStyle = bgGrad;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+
+                // Check AR hand collisions
+                this.checkHandHits();
+
+                // Update & Render Particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.update();
+                    p.draw(this.ctx);
+                    if (p.alpha <= 0) this.particles.splice(i, 1);
+                }
+
+                // Update & Render Targets
                 for (let i = this.targets.length - 1; i >= 0; i--) {
                     const t = this.targets[i];
                     t.remaining -= dt * 1000;
-
                     if (t.remaining <= 0) {
                         this.targets.splice(i, 1);
-                        this.combo = 0;
-
-                        if (this.mode === 'survival') {
-                            this.lives--;
-                            if (this.lives <= 0) {
-                                this.endGame();
-                                return;
-                            }
-                        }
-                        this.updateHUD();
+                        this.missTarget();
                     } else {
                         t.draw(this.ctx);
                     }
                 }
 
-                // Render Hand Tracking Neon Effects
-                this.drawHandEffects();
+                // Draw Hand Indicators (Laser Aura)
+                if (this.useAR && this.detectedHandPoints.length > 0) {
+                    for (const pt of this.detectedHandPoints) {
+                        this.ctx.save();
+                        this.ctx.beginPath();
+                        this.ctx.arc(pt.x, pt.y, 22, 0, Math.PI * 2);
+                        this.ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+                        this.ctx.strokeStyle = '#38bdf8';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.shadowColor = '#38bdf8';
+                        this.ctx.shadowBlur = 15;
+                        this.ctx.fill();
+                        this.ctx.stroke();
 
-                // Draw Burst Particles
-                for (let i = this.particles.length - 1; i >= 0; i--) {
-                    const p = this.particles[i];
-                    p.update();
-                    if (p.alpha <= 0) {
-                        this.particles.splice(i, 1);
-                    } else {
-                        p.draw(this.ctx);
+                        this.ctx.beginPath();
+                        this.ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.fill();
+                        this.ctx.restore();
                     }
                 }
 
-                this.updateHUD();
-                this.animFrameId = requestAnimationFrame((timestamp) => this.loop(timestamp));
-            }
+                // Spawn Target logic
+                const conf = this.diffConfig[this.difficulty];
+                if (now - this.lastSpawnTime > conf.spawnInterval) {
+                    // countモードは「ヒット数 + 現在画面にある数」が30未満の時のみ生成
+                    const canSpawnCountMode = this.mode === 'count' && (this.hits + this.targets.length < this.maxTargetsCount);
+                    const canSpawnOtherMode = this.mode !== 'count';
 
-            drawHandEffects() {
-                if (!this.detectedHandPoints || this.detectedHandPoints.length === 0) return;
+                    if (canSpawnCountMode || canSpawnOtherMode) {
+                        if (this.targets.length < 3) {
+                            this.spawnTarget();
+                            this.lastSpawnTime = now;
+                        }
+                    }
+                }
 
-                this.detectedHandPoints.forEach(pt => {
-                    this.ctx.save();
-                    
-                    // Glowing outer aura
-                    this.ctx.beginPath();
-                    this.ctx.arc(pt.x, pt.y, pt.isIndex ? 22 : 14, 0, Math.PI * 2);
-                    this.ctx.fillStyle = pt.isIndex ? 'rgba(6, 182, 212, 0.25)' : 'rgba(236, 72, 153, 0.25)';
-                    this.ctx.fill();
-
-                    // Laser Core Ring
-                    this.ctx.beginPath();
-                    this.ctx.arc(pt.x, pt.y, pt.isIndex ? 12 : 8, 0, Math.PI * 2);
-                    this.ctx.strokeStyle = pt.isIndex ? '#38bdf8' : '#f472b6';
-                    this.ctx.lineWidth = 3;
-                    this.ctx.shadowColor = pt.isIndex ? '#06b6d4' : '#ec4899';
-                    this.ctx.shadowBlur = 15;
-                    this.ctx.stroke();
-
-                    // Inner bright white center dot
-                    this.ctx.beginPath();
-                    this.ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#ffffff';
-                    this.ctx.fill();
-
-                    this.ctx.restore();
-                });
+                this.animFrameId = requestAnimationFrame((n) => this.loop(n));
             }
 
             updateHUD() {
+                const label1 = document.getElementById('statLabel1');
                 const val1 = document.getElementById('statVal1');
+                const label2 = document.getElementById('statLabel2');
                 const val2 = document.getElementById('statVal2');
 
-                if (this.mode === 'time') {
-                    val1.textContent = this.score;
-                    val2.textContent = `${Math.max(0, this.timeLeft).toFixed(1)}s`;
-                } else if (this.mode === 'count') {
-                    val1.textContent = `${this.maxTargetsCount - this.targetsCount}`;
+                if (this.mode === 'count') {
+                    label1.textContent = "CLEARED";
+                    val1.textContent = `${this.hits}/30`;
+                    label2.textContent = "TIME";
                     val2.textContent = `${this.timeLeft.toFixed(1)}s`;
                 } else if (this.mode === 'survival') {
+                    label1.textContent = "SCORE";
                     val1.textContent = this.score;
-                    val2.textContent = '❤️'.repeat(Math.max(0, this.lives));
+                    label2.textContent = "LIFE";
+                    val2.textContent = "❤️".repeat(Math.max(0, this.lives));
+                } else {
+                    label1.textContent = "SCORE";
+                    val1.textContent = this.score;
+                    label2.textContent = "TIME";
+                    val2.textContent = `${Math.max(0, this.timeLeft).toFixed(1)}s`;
                 }
 
-                const comboContainer = document.getElementById('comboContainer');
+                const comboCont = document.getElementById('comboContainer');
                 const comboText = document.getElementById('comboText');
-
                 if (this.combo >= 2) {
-                    comboContainer.classList.remove('opacity-0');
                     comboText.textContent = `${this.combo} COMBO!`;
+                    comboCont.classList.remove('opacity-0');
                 } else {
-                    comboContainer.classList.add('opacity-0');
+                    comboCont.classList.add('opacity-0');
                 }
             }
 
-            endGame() {
-                this.isPlaying = false;
-                if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
-                this.stopCamera();
+            initUI() {
+                // Canvas Click Event
+                this.canvas.addEventListener('pointerdown', (e) => this.handleCanvasClick(e));
 
-                this.sound.playFinish();
+                // AR Toggle
+                const arToggle = document.getElementById('arToggle');
+                arToggle.addEventListener('change', (e) => {
+                    this.useAR = e.target.checked;
+                    this.updateHandBadge(false);
+                });
 
-                const avgRxTime = this.reactionTimes.length > 0 
-                    ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
-                    : 0;
+                // Sound Toggle
+                const soundBtn = document.getElementById('soundToggleBtn');
+                const soundIcon = document.getElementById('soundIcon');
+                soundBtn.addEventListener('click', () => {
+                    this.sound.muted = !this.sound.muted;
+                    soundIcon.className = this.sound.muted ? "fa-solid fa-volume-xmark text-slate-500" : "fa-solid fa-volume-high text-cyan-400";
+                });
 
-                const accuracy = this.totalClicks > 0 
-                    ? Math.round((this.hits / this.totalClicks) * 100)
-                    : 0;
+                // Mode Buttons
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mode-btn').forEach(b => {
+                            b.classList.remove('active-mode', 'border-cyan-500', 'bg-slate-800');
+                            b.classList.add('opacity-70');
+                        });
+                        btn.classList.add('active-mode', 'border-cyan-500', 'bg-slate-800');
+                        btn.classList.remove('opacity-70');
+                        this.mode = btn.dataset.mode;
+                        document.getElementById('modeDescription').textContent = this.modeDescriptions[this.mode];
+                        this.updateHeaderBest();
+                    });
+                });
 
-                let rank = 'C';
-                let rankTitle = 'トレーニングを続けましょう';
+                // Difficulty Buttons
+                document.querySelectorAll('.diff-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.diff-btn').forEach(b => {
+                            b.classList.remove('active-diff', 'border-cyan-500', 'bg-slate-800', 'text-white');
+                            b.classList.add('text-slate-300');
+                        });
+                        btn.classList.add('active-diff', 'border-cyan-500', 'bg-slate-800', 'text-white');
+                        btn.classList.remove('text-slate-300');
+                        this.difficulty = btn.dataset.diff;
+                        this.updateHeaderBest();
+                    });
+                });
 
-                if (this.mode === 'count') {
-                    if (this.timeLeft <= 15.0) { rank = 'S+'; rankTitle = '神の動体視力'; }
-                    else if (this.timeLeft <= 18.0) { rank = 'S'; rankTitle = 'アスリート級'; }
-                    else if (this.timeLeft <= 22.0) { rank = 'A'; rankTitle = 'プロゲーマー級'; }
-                    else if (this.timeLeft <= 28.0) { rank = 'B'; rankTitle = '平均以上'; }
-                } else {
-                    if (avgRxTime > 0 && avgRxTime <= 280 && accuracy >= 90) {
-                        rank = 'S+'; rankTitle = '神の動体視力';
-                    } else if (avgRxTime <= 340 && accuracy >= 80) {
-                        rank = 'S'; rankTitle = '超人レベル';
-                    } else if (avgRxTime <= 420) {
-                        rank = 'A'; rankTitle = 'プロゲーマー級';
-                    } else if (avgRxTime <= 520) {
-                        rank = 'B'; rankTitle = '標準レベル';
-                    }
-                }
+                // Modal Buttons
+                const infoModal = document.getElementById('infoModal');
+                document.getElementById('infoModalBtn').addEventListener('click', () => infoModal.classList.remove('hidden'));
+                document.getElementById('closeInfoBtn').addEventListener('click', () => infoModal.classList.add('hidden'));
+                document.getElementById('closeInfoModalBtn').addEventListener('click', () => infoModal.classList.add('hidden'));
 
-                const finalMetric = this.mode === 'count' ? this.timeLeft : this.score;
-                this.saveBestScore(finalMetric);
+                // Navigation / Game Control Buttons
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('menuBtn').addEventListener('click', () => {
+                    this.isPlaying = false;
+                    this.stopCamera();
+                    document.getElementById('resultScreen').classList.add('hidden');
+                    document.getElementById('gameScreen').classList.add('hidden');
+                    document.getElementById('startScreen').classList.remove('hidden');
+                });
 
-                document.getElementById('resultRank').textContent = `RANK ${rank}`;
-                document.getElementById('resultRankTitle').textContent = rankTitle;
-
-                if (this.mode === 'count') {
-                    document.getElementById('resultScore').textContent = `${this.timeLeft.toFixed(2)}s`;
-                } else {
-                    document.getElementById('resultScore').textContent = this.score;
-                }
-
-                document.getElementById('resultAvgTime').textContent = `${avgRxTime} ms`;
-                document.getElementById('resultAccuracy').textContent = `${accuracy}%`;
-                document.getElementById('resultMaxCombo').textContent = this.maxCombo;
-
-                document.getElementById('gameScreen').classList.add('hidden');
-                document.getElementById('resultScreen').classList.remove('hidden');
+                this.updateHeaderBest();
             }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            window.game = new GameEngine();
+            window.gameApp = new GameEngine();
         });
     </script>
 </body>
