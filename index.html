@@ -551,8 +551,10 @@
 
             resizeCanvas() {
                 const rect = this.canvas.parentElement.getBoundingClientRect();
-                this.canvas.width = rect.width;
-                this.canvas.height = rect.height;
+                if (rect.width > 0 && rect.height > 0) {
+                    this.canvas.width = rect.width;
+                    this.canvas.height = rect.height;
+                }
             }
 
             initUI() {
@@ -672,6 +674,9 @@
                 document.getElementById('resultScreen').classList.add('hidden');
                 document.getElementById('gameScreen').classList.remove('hidden');
 
+                // 表示状態になった後に正確なキャンバスサイズを確定する
+                this.resizeCanvas();
+
                 const label1 = document.getElementById('statLabel1');
                 const label2 = document.getElementById('statLabel2');
 
@@ -698,8 +703,14 @@
                 const conf = this.diffConfig[this.difficulty];
                 const padding = conf.radius + 30;
 
-                const maxX = this.canvas.width - padding;
-                const maxY = this.canvas.height - padding;
+                // キャンバスサイズが確定していない場合のセーフティガード
+                const minWidth = padding * 2 + 50;
+                const minHeight = padding * 2 + 50;
+                const width = Math.max(this.canvas.width || 0, minWidth);
+                const height = Math.max(this.canvas.height || 0, minHeight);
+
+                const maxX = width - padding;
+                const maxY = height - padding;
 
                 const x = Math.random() * (maxX - padding) + padding;
                 const y = Math.random() * (maxY - padding) + padding;
