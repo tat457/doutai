@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 
-    <!-- MediaPipe Hands for Hand Tracking AI (Pinned stable versions) -->
+    <!-- MediaPipe Hands for Hand Tracking AI -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
 
@@ -53,13 +53,11 @@
             transform: translateY(1px);
         }
 
-        /* Canvas styling */
         #gameCanvas {
             touch-action: none;
             background: #020617;
         }
 
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -71,7 +69,6 @@
             border-radius: 3px;
         }
 
-        /* Pulsing neon badge */
         @keyframes pulseGlow {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.7; transform: scale(1.05); }
@@ -86,30 +83,29 @@
     <!-- Hidden Video Element for MediaPipe Input -->
     <video id="webcam" class="hidden" playsinline muted></video>
 
-    <!-- Header / Navigation -->
+    <!-- Header Navigation -->
     <header class="w-full p-3 sm:p-4 z-20 flex justify-between items-center glass-panel border-b border-slate-800">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <i class="fa-solid fa-hand-pointer text-slate-950 text-xl"></i>
+                <i class="fa-solid fa-wand-magic-sparkles text-slate-950 text-xl"></i>
             </div>
             <div>
                 <h1 class="text-lg sm:text-xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 via-teal-300 to-fuchsia-400 bg-clip-text text-transparent font-outfit">
                     FLASH REFLEX AR
                 </h1>
-                <p class="text-[10px] sm:text-xs text-slate-400">ARカメラ & 手認識 動体視力トレーニング</p>
+                <p class="text-[10px] sm:text-xs text-slate-400">ARカメラ & プロジェクター対応 動体視力トレーニング</p>
             </div>
         </div>
 
-        <!-- Controls / HighScore -->
         <div class="flex items-center gap-2 sm:gap-3">
             <div class="hidden sm:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
                 <span class="text-[10px] text-slate-400 uppercase tracking-widest font-outfit">BEST SCORE</span>
                 <span id="headerBestScore" class="text-sm font-bold text-cyan-400 font-outfit">0</span>
             </div>
-            <button id="soundToggleBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
+            <button id="soundToggleBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white" title="サウンド切り替え">
                 <i class="fa-solid fa-volume-high text-cyan-400" id="soundIcon"></i>
             </button>
-            <button id="infoModalBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white">
+            <button id="infoModalBtn" class="w-10 h-10 rounded-xl glass-button flex items-center justify-center text-slate-300 hover:text-white" title="使い方">
                 <i class="fa-solid fa-circle-info"></i>
             </button>
         </div>
@@ -118,80 +114,120 @@
     <!-- Main Content Container -->
     <main class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden">
 
-        <!-- Toast Notification Message -->
+        <!-- Toast Notification -->
         <div id="toastMessage" class="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-amber-500/90 text-slate-950 font-bold text-xs shadow-lg transition-all opacity-0 pointer-events-none transform -translate-y-2">
             通知メッセージ
         </div>
 
         <!-- 1. START SCREEN -->
-        <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 flex flex-col gap-5 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800">
-            <div class="text-center space-y-2">
-                <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide mb-1">
-                    <i class="fa-solid fa-camera-retro mr-1"></i> AR VISION & HAND TRACKING
+        <div id="startScreen" class="w-full max-w-md glass-panel rounded-3xl p-5 sm:p-6 flex flex-col gap-4 z-10 shadow-2xl shadow-cyan-950/40 border border-slate-800 max-h-[85vh] overflow-y-auto">
+            <div class="text-center space-y-1">
+                <div class="inline-block px-3 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide">
+                    <i class="fa-solid fa-video mr-1"></i> AR & PROJECTION MODE
                 </div>
-                <h2 class="text-2xl sm:text-3xl font-black text-white">ゲーム設定</h2>
-                <p class="text-xs sm:text-sm text-slate-400">カメラに手をかざすか画面タップで光を素早くタッチ！</p>
+                <h2 class="text-2xl font-black text-white">ゲーム設定</h2>
+                <p class="text-xs text-slate-400">カメラに手をかざすか画面タッチで光をすばやくキャッチ！</p>
             </div>
 
-            <!-- AR / Camera Mode Toggle Switch -->
-            <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
-                        <i class="fa-solid fa-video"></i>
+            <!-- Mode & Camera Switch Options -->
+            <div class="space-y-2">
+                <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white">AR カメラ手認識</div>
+                            <div class="text-[10px] text-slate-400">Webカメラで手かざしタッチ</div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-xs font-bold text-white">AR カメラ手認識</div>
-                        <div class="text-[10px] text-slate-400">Webカメラで手かざしタッチ</div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="arToggle" class="sr-only peer" checked>
+                        <div class="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
+                </div>
+
+                <!-- Projector Customization Collapsible / Box -->
+                <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-projector text-cyan-400"></i> プロジェクター・大画面設定
+                        </span>
+                        <span class="text-[9px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">壁・床投影用</span>
+                    </div>
+
+                    <!-- Projection Background High Contrast Mode -->
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 font-medium">投影モード（カメラ背景を消す）</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="projBgToggle" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Mirror / Flip Horizontal -->
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 font-medium">左右反転 (ミラー表示)</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="mirrorToggle" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Target Scale for Large Screen Projection -->
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <span class="text-slate-300 font-medium">ターゲットサイズ</span>
+                        <div class="flex gap-1">
+                            <button class="size-btn px-2.5 py-1 rounded-lg text-[10px] font-bold glass-button active-size border-cyan-500 bg-slate-800 text-cyan-300" data-scale="1.0">標準</button>
+                            <button class="size-btn px-2.5 py-1 rounded-lg text-[10px] font-bold glass-button text-slate-400" data-scale="1.5">大型 (1.5x)</button>
+                            <button class="size-btn px-2.5 py-1 rounded-lg text-[10px] font-bold glass-button text-slate-400" data-scale="2.0">超大型 (2x)</button>
+                        </div>
                     </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="arToggle" class="sr-only peer" checked>
-                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
-                </label>
             </div>
 
             <!-- Mode Selection -->
-            <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">ゲームモード</label>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">ゲームモード</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center active-mode border-cyan-500 bg-slate-800" data-mode="time">
-                        <i class="fa-solid fa-stopwatch text-cyan-400 text-lg mb-1"></i>
+                    <button class="mode-btn glass-button p-2.5 rounded-xl flex flex-col items-center justify-center text-center active-mode border-cyan-500 bg-slate-800" data-mode="time">
+                        <i class="fa-solid fa-stopwatch text-cyan-400 text-base mb-1"></i>
                         <span class="text-xs font-bold block text-white">30秒アタック</span>
                     </button>
-                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="count">
-                        <i class="fa-solid fa-bullseye text-fuchsia-400 text-lg mb-1"></i>
+                    <button class="mode-btn glass-button p-2.5 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="count">
+                        <i class="fa-solid fa-bullseye text-fuchsia-400 text-base mb-1"></i>
                         <span class="text-xs font-bold block text-white">30個消去</span>
                     </button>
-                    <button class="mode-btn glass-button p-3 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="survival">
-                        <i class="fa-solid fa-shield-heart text-emerald-400 text-lg mb-1"></i>
+                    <button class="mode-btn glass-button p-2.5 rounded-xl flex flex-col items-center justify-center text-center opacity-70" data-mode="survival">
+                        <i class="fa-solid fa-shield-heart text-emerald-400 text-base mb-1"></i>
                         <span class="text-xs font-bold block text-white">サバイバル</span>
                     </button>
                 </div>
             </div>
 
             <!-- Difficulty Selection -->
-            <div class="space-y-2">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">難易度</label>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">難易度</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="easy">
+                    <button class="diff-btn glass-button py-2 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="easy">
                         EASY
                     </button>
-                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-white active-diff border-cyan-500 bg-slate-800" data-diff="normal">
+                    <button class="diff-btn glass-button py-2 px-2 rounded-xl text-xs font-bold text-white active-diff border-cyan-500 bg-slate-800" data-diff="normal">
                         NORMAL
                     </button>
-                    <button class="diff-btn glass-button py-2.5 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="hard">
+                    <button class="diff-btn glass-button py-2 px-2 rounded-xl text-xs font-bold text-slate-300" data-diff="hard">
                         HARD
                     </button>
                 </div>
             </div>
 
             <!-- Game Description Summary -->
-            <div id="modeDescription" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300 leading-relaxed min-h-[48px] flex items-center">
+            <div id="modeDescription" class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300 leading-relaxed min-h-[44px] flex items-center">
                 制限時間30秒以内に、現れる光の点を何回タッチできるか競います。
             </div>
 
             <!-- Start Button -->
-            <button id="startGameBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-slate-950 font-black text-lg shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+            <button id="startGameBtn" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-teal-400 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 text-slate-950 font-black text-base shadow-lg shadow-cyan-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer mt-1">
                 <i class="fa-solid fa-play"></i> START GAME
             </button>
         </div>
@@ -206,7 +242,7 @@
                     <span id="statVal1" class="text-xl sm:text-2xl font-black text-cyan-400 font-outfit">0</span>
                 </div>
 
-                <!-- Center Hand Detection Badge & Combo Indicator -->
+                <!-- Center Hand Status Badge & Combo Indicator -->
                 <div class="flex flex-col items-center gap-1">
                     <div id="handStatusBadge" class="px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-all bg-amber-500/20 text-amber-300 border border-amber-500/40">
                         <i class="fa-solid fa-hand text-amber-400"></i>
@@ -243,13 +279,11 @@
                 <h2 class="text-3xl font-black text-white font-outfit">PERFORMANCE</h2>
             </div>
 
-            <!-- Main Score Badge -->
             <div class="relative p-5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex flex-col items-center justify-center shadow-inner">
                 <span id="resultRank" class="text-5xl font-black my-1 text-cyan-400 font-outfit">RANK A</span>
                 <span id="resultRankTitle" class="text-xs font-semibold text-cyan-400">プロ級の動体視力</span>
             </div>
 
-            <!-- Detail Grid -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col">
                     <span class="text-[10px] text-slate-400 font-bold">スコア / 達成</span>
@@ -269,7 +303,6 @@
                 </div>
             </div>
 
-            <!-- Action Buttons -->
             <div class="flex gap-3 pt-2">
                 <button id="retryBtn" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-rotate-right"></i> もう一度遊ぶ
@@ -282,12 +315,12 @@
 
     </main>
 
-    <!-- Info & Help Modal -->
+    <!-- Info & Projection Instructions Modal -->
     <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center pb-2 border-b border-slate-800">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-circle-question text-cyan-400"></i> ゲーム仕様 & AR機能について
+                    <i class="fa-solid fa-projector text-cyan-400"></i> プロジェクター投影 & AR設定
                 </h3>
                 <button id="closeInfoBtn" class="text-slate-400 hover:text-white p-1">
                     <i class="fa-solid fa-xmark text-xl"></i>
@@ -295,21 +328,18 @@
             </div>
 
             <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                <h4 class="font-bold text-cyan-300 border-l-2 border-cyan-400 pl-2">ARカメラモードの遊び方</h4>
+                <h4 class="font-bold text-cyan-300 border-l-2 border-cyan-400 pl-2">プロジェクター・壁投影での楽しみ方</h4>
                 <ul class="list-disc list-inside space-y-1 text-slate-400">
-                    <li>カメラ許可を有効にすると、画面に映像が投影されます。</li>
-                    <li>カメラに手をかざすと<b>指先（人差し指など）にオーラエフェクト</b>が表示されます。</li>
-                    <li>指先を画面内の<b>光る点に重ねる</b>と消去できます！</li>
-                    <li>画面を直接タップ（クリック）してもいつでもプレイ可能です。</li>
+                    <li>PCやスマートフォンをプロジェクターに接続し、壁や床に画面を大きく投影します。</li>
+                    <li><b>投影モード (背景消去)</b> をONにすると、カメラの映像を消し、壁の上に輝くターゲットと手のオーラのみを直接投影できます。</li>
+                    <li><b>左右反転 (ミラー)</b> をON/OFF切り替えることで、リア投影やカメラの向く角度に応じた位置合わせができます。</li>
+                    <li>大画面でタッチしにくい場合は、<b>ターゲットサイズ（1.5x / 2x）</b>を大きく設定してください。</li>
                 </ul>
 
-                <h4 class="font-bold text-fuchsia-300 border-l-2 border-fuchsia-400 pl-2 mt-4">GitHub Pages公開手順</h4>
-                <ol class="list-decimal list-inside space-y-1 text-slate-400 font-mono text-[11px] sm:text-xs">
-                    <li>このファイルを <code class="text-cyan-400">index.html</code> としてリポジトリに保存</li>
-                    <li>GitHub リポジトリの <b>Settings &gt; Pages</b> を開く</li>
-                    <li>Source を <b>Deploy from a branch</b> にし、<code class="text-cyan-400">main</code> を選択</li>
-                    <li>発行されたHTTPS対応URLからアクセス（カメラ利用にはHTTPS接続が必須です）</li>
-                </ol>
+                <h4 class="font-bold text-teal-300 border-l-2 border-teal-400 pl-2 mt-4">通常のARカメラ操作</h4>
+                <p class="text-slate-400">
+                    カメラに手をかざすと指先に<b>青いオーラエフェクト</b>が表示されます。指先を投影された光に重ねることでヒットできます！
+                </p>
             </div>
 
             <button id="closeInfoModalBtn" class="mt-2 w-full py-3 rounded-xl glass-button text-xs font-bold text-white hover:bg-slate-800">
@@ -349,7 +379,6 @@
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
-                    
                     const baseFreq = 440;
                     const freq = baseFreq * Math.pow(1.05, Math.min(combo, 20));
 
@@ -429,7 +458,7 @@
                 this.maxDuration = duration;
                 this.remaining = duration;
                 this.spawnTime = performance.now();
-                this.hue = Math.floor(Math.random() * 60) + 170; // Cyan-Purple range
+                this.hue = Math.floor(Math.random() * 60) + 170; // Cyan-Purple
             }
 
             draw(ctx) {
@@ -440,8 +469,8 @@
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, Math.max(1, currentRadius), 0, Math.PI * 2);
 
-                ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.8)`;
-                ctx.shadowBlur = 25;
+                ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.9)`;
+                ctx.shadowBlur = 30;
 
                 const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, Math.max(1, currentRadius));
                 grad.addColorStop(0, '#ffffff');
@@ -451,11 +480,11 @@
                 ctx.fillStyle = grad;
                 ctx.fill();
 
-                // Inner ring duration indicator
+                // Inner ring duration timer
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, currentRadius + 5, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
-                ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, 0.7)`;
-                ctx.lineWidth = 3;
+                ctx.arc(this.x, this.y, currentRadius + 6, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
+                ctx.strokeStyle = `hsla(${this.hue}, 100%, 75%, 0.8)`;
+                ctx.lineWidth = 3.5;
                 ctx.stroke();
 
                 ctx.restore();
@@ -468,11 +497,11 @@
                 this.y = y;
                 this.hue = hue;
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 7 + 2;
+                this.speed = Math.random() * 8 + 2;
                 this.friction = 0.93;
                 this.alpha = 1;
                 this.decay = Math.random() * 0.03 + 0.02;
-                this.radius = Math.random() * 3 + 2;
+                this.radius = Math.random() * 3.5 + 2;
             }
 
             update() {
@@ -489,7 +518,7 @@
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
                 ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 12;
                 ctx.fill();
                 ctx.restore();
             }
@@ -502,7 +531,7 @@
                 this.video = document.getElementById('webcam');
                 this.sound = new SoundEngine();
 
-                // Difficulty Configurations
+                // Base Difficulty Configs
                 this.diffConfig = {
                     easy: { radius: 38, duration: 2000, spawnInterval: 950 },
                     normal: { radius: 28, duration: 1300, spawnInterval: 680 },
@@ -519,6 +548,11 @@
                 this.difficulty = 'normal';
                 this.useAR = true;
                 this.isPlaying = false;
+
+                // Projection Controls
+                this.hideCameraBg = false;
+                this.isMirrored = true;
+                this.targetScale = 1.0;
 
                 this.score = 0;
                 this.combo = 0;
@@ -541,7 +575,6 @@
                 this.lastFrameTime = 0;
                 this.animFrameId = null;
 
-                // MediaPipe Hands setup
                 this.handsDetector = null;
                 this.isProcessingHand = false;
                 this.cameraStream = null;
@@ -636,9 +669,8 @@
             async startCamera() {
                 if (!this.useAR) return false;
 
-                // Check mediaDevices support
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    console.warn("Webcam not supported in this environment");
+                    console.warn("Webcam not supported");
                     this.useAR = false;
                     document.getElementById('arToggle').checked = false;
                     this.showToast("カメラ非対応環境のためタップモードに変更しました");
@@ -652,7 +684,6 @@
                 this.stopCamera();
 
                 try {
-                    // Promise with 3s timeout to prevent hanging on permission prompt
                     const cameraPromise = navigator.mediaDevices.getUserMedia({
                         video: {
                             facingMode: 'user',
@@ -670,7 +701,7 @@
                     await this.video.play();
                     return true;
                 } catch (err) {
-                    console.warn("Camera access denied or timed out:", err);
+                    console.warn("Camera access failed:", err);
                     this.useAR = false;
                     document.getElementById('arToggle').checked = false;
                     this.showToast("カメラを使用できないためタップモードで開始します");
@@ -700,7 +731,10 @@
                     for (const landmarks of results.multiHandLandmarks) {
                         const indexTip = landmarks[8];
                         if (indexTip) {
-                            const x = (1 - indexTip.x) * this.canvas.width;
+                            // Apply mirror transformation according to isMirrored setting
+                            const x = this.isMirrored 
+                                ? (1 - indexTip.x) * this.canvas.width
+                                : indexTip.x * this.canvas.width;
                             const y = indexTip.y * this.canvas.height;
                             this.detectedHandPoints.push({ x, y });
                         }
@@ -730,18 +764,18 @@
                 try {
                     this.sound.init();
 
-                    // Instantly switch UI to game screen so dimension calculations work
+                    // ゲーム開始時にUIの設定状態（投影モード・AR・ミラーなど）を再同期
+                    this.syncSettingsFromUI();
+
                     document.getElementById('startScreen').classList.add('hidden');
                     document.getElementById('resultScreen').classList.add('hidden');
                     document.getElementById('gameScreen').classList.remove('hidden');
 
                     this.resizeCanvas();
 
-                    // Setup gameplay parameters
                     this.isPlaying = true;
                     this.isProcessingHand = false;
 
-                    // Reset Statistics
                     this.score = 0;
                     this.combo = 0;
                     this.maxCombo = 0;
@@ -761,7 +795,6 @@
 
                     this.updateHUD();
 
-                    // Start camera in background if enabled
                     if (this.useAR) {
                         this.startCamera().then(() => this.updateHandBadge(false));
                     } else {
@@ -769,7 +802,6 @@
                         this.updateHandBadge(false);
                     }
 
-                    // Start animation loop immediately
                     if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
                     this.animFrameId = requestAnimationFrame((now) => this.loop(now));
 
@@ -800,12 +832,10 @@
                 const scoreVal = this.mode === 'count' ? this.timeLeft : this.score;
                 this.saveBestScore(scoreVal);
 
-                // --- ランク判定ロジックの刷新（反応時間と正確性を重視） ---
                 let rank = 'C';
                 let rankTitle = 'トレーニングが必要';
 
                 if (this.hits > 0) {
-                    // 反応速度(ms) と 正確性(%) による fair な基準
                     if (avgReact <= 320 && accuracy >= 85) {
                         rank = 'S';
                         rankTitle = '神の動体視力';
@@ -820,7 +850,6 @@
                         rankTitle = '見習いレベル';
                     }
 
-                    // HARDモードでの優秀なプレイにはランク昇格ボーナス
                     if (rank !== 'S' && this.difficulty === 'hard' && accuracy >= 80 && avgReact <= 480) {
                         if (rank === 'A') rank = 'S';
                         else if (rank === 'B') rank = 'A';
@@ -838,7 +867,8 @@
 
             spawnTarget() {
                 const conf = this.diffConfig[this.difficulty];
-                const margin = conf.radius + 20;
+                const radius = conf.radius * this.targetScale;
+                const margin = radius + 25;
 
                 const width = Math.max(200, this.canvas.width);
                 const height = Math.max(200, this.canvas.height);
@@ -846,7 +876,7 @@
                 const x = Math.random() * (width - margin * 2) + margin;
                 const y = Math.random() * (height - margin * 2) + margin;
 
-                this.targets.push(new Target(x, y, conf.radius, conf.duration));
+                this.targets.push(new Target(x, y, radius, conf.duration));
                 this.targetsCount++;
             }
 
@@ -866,8 +896,7 @@
 
                 this.sound.playHit(this.combo);
 
-                // Particle burst
-                for (let i = 0; i < 18; i++) {
+                for (let i = 0; i < 20; i++) {
                     this.particles.push(new Particle(hitX, hitY, target.hue));
                 }
 
@@ -925,7 +954,9 @@
                     for (let i = this.targets.length - 1; i >= 0; i--) {
                         const t = this.targets[i];
                         const dist = Math.hypot(pt.x - t.x, pt.y - t.y);
-                        if (dist <= t.radius + 25) {
+                        // Allowance scale for hand tracking touch
+                        const touchMargin = 25 * this.targetScale;
+                        if (dist <= t.radius + touchMargin) {
                             const reactTime = performance.now() - t.spawnTime;
                             this.totalClicks++;
                             this.hitTarget(i, t.x, t.y, reactTime);
@@ -941,7 +972,6 @@
                 const dt = (now - this.lastFrameTime) / 1000;
                 this.lastFrameTime = now;
 
-                // Handle Timer
                 if (this.mode === 'time') {
                     this.timeLeft -= dt;
                     if (this.timeLeft <= 0) {
@@ -954,7 +984,7 @@
                     this.timeLeft += dt;
                 }
 
-                // MediaPipe processing lock
+                // MediaPipe Hand Detection Process
                 if (this.useAR && this.handsDetector && this.video.readyState >= 2 && !this.video.paused && this.video.videoWidth > 0 && !this.isProcessingHand) {
                     this.isProcessingHand = true;
                     this.handsDetector.send({ image: this.video })
@@ -966,33 +996,39 @@
                         });
                 }
 
-                // Render Background
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                if (this.useAR && this.video.readyState >= 2 && !this.video.paused && this.video.videoWidth > 0) {
+                // 投影背景設定のリアルタイム同期
+                const projBgInput = document.getElementById('projBgToggle');
+                if (projBgInput) this.hideCameraBg = projBgInput.checked;
+
+                // Render Background & Camera Video based on Projection Hide Mode
+                if (this.useAR && !this.hideCameraBg && this.video.readyState >= 2 && !this.video.paused && this.video.videoWidth > 0) {
                     this.ctx.save();
-                    this.ctx.translate(this.canvas.width, 0);
-                    this.ctx.scale(-1, 1);
+                    if (this.isMirrored) {
+                        this.ctx.translate(this.canvas.width, 0);
+                        this.ctx.scale(-1, 1);
+                    }
                     this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
                     
                     this.ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
                     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                     this.ctx.restore();
                 } else {
+                    // Dark Projection High-Contrast Background
                     const bgGrad = this.ctx.createRadialGradient(
                         this.canvas.width / 2, this.canvas.height / 2, 50,
                         this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
                     );
-                    bgGrad.addColorStop(0, '#0f172a');
+                    bgGrad.addColorStop(0, '#0a0f1d');
                     bgGrad.addColorStop(1, '#020617');
                     this.ctx.fillStyle = bgGrad;
                     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 }
 
-                // Check AR hand collisions
                 this.checkHandHits();
 
-                // Update & Render Particles
+                // Draw Particles
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
                     p.update();
@@ -1000,7 +1036,7 @@
                     if (p.alpha <= 0) this.particles.splice(i, 1);
                 }
 
-                // Update & Render Targets
+                // Draw Targets
                 for (let i = this.targets.length - 1; i >= 0; i--) {
                     const t = this.targets[i];
                     t.remaining -= dt * 1000;
@@ -1012,22 +1048,22 @@
                     }
                 }
 
-                // Draw Hand Indicators (Laser Aura)
+                // Draw Hand Tracker Aura / Pointer
                 if (this.useAR && this.detectedHandPoints.length > 0) {
                     for (const pt of this.detectedHandPoints) {
                         this.ctx.save();
                         this.ctx.beginPath();
-                        this.ctx.arc(pt.x, pt.y, 22, 0, Math.PI * 2);
-                        this.ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+                        this.ctx.arc(pt.x, pt.y, 25, 0, Math.PI * 2);
+                        this.ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
                         this.ctx.strokeStyle = '#38bdf8';
                         this.ctx.lineWidth = 3;
                         this.ctx.shadowColor = '#38bdf8';
-                        this.ctx.shadowBlur = 15;
+                        this.ctx.shadowBlur = 18;
                         this.ctx.fill();
                         this.ctx.stroke();
 
                         this.ctx.beginPath();
-                        this.ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+                        this.ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
                         this.ctx.fillStyle = '#ffffff';
                         this.ctx.fill();
                         this.ctx.restore();
@@ -1037,7 +1073,6 @@
                 // Spawn Target logic
                 const conf = this.diffConfig[this.difficulty];
                 if (now - this.lastSpawnTime > conf.spawnInterval) {
-                    // countモードは「ヒット数 + 現在画面にある数」が30未満の時のみ生成
                     const canSpawnCountMode = this.mode === 'count' && (this.hits + this.targets.length < this.maxTargetsCount);
                     const canSpawnOtherMode = this.mode !== 'count';
 
@@ -1074,26 +1109,54 @@
                     label2.textContent = "TIME";
                     val2.textContent = `${Math.max(0, this.timeLeft).toFixed(1)}s`;
                 }
+            }
 
-                const comboCont = document.getElementById('comboContainer');
-                const comboText = document.getElementById('comboText');
-                if (this.combo >= 2) {
-                    comboText.textContent = `${this.combo} COMBO!`;
-                    comboCont.classList.remove('opacity-0');
-                } else {
-                    comboCont.classList.add('opacity-0');
-                }
+            syncSettingsFromUI() {
+                const arToggle = document.getElementById('arToggle');
+                if (arToggle) this.useAR = arToggle.checked;
+
+                const projBgToggle = document.getElementById('projBgToggle');
+                if (projBgToggle) this.hideCameraBg = projBgToggle.checked;
+
+                const mirrorToggle = document.getElementById('mirrorToggle');
+                if (mirrorToggle) this.isMirrored = mirrorToggle.checked;
             }
 
             initUI() {
-                // Canvas Click Event
+                this.syncSettingsFromUI();
+
                 this.canvas.addEventListener('pointerdown', (e) => this.handleCanvasClick(e));
 
-                // AR Toggle
+                // AR Mode Toggle
                 const arToggle = document.getElementById('arToggle');
                 arToggle.addEventListener('change', (e) => {
                     this.useAR = e.target.checked;
                     this.updateHandBadge(false);
+                });
+
+                // Projector Background Hide Toggle
+                const projBgToggle = document.getElementById('projBgToggle');
+                projBgToggle.addEventListener('change', (e) => {
+                    this.hideCameraBg = e.target.checked;
+                });
+
+                // Mirror Display Toggle
+                const mirrorToggle = document.getElementById('mirrorToggle');
+                mirrorToggle.addEventListener('change', (e) => {
+                    this.isMirrored = e.target.checked;
+                });
+
+                // Target Size Scale Buttons
+                document.querySelectorAll('.size-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.size-btn').forEach(b => {
+                            b.classList.remove('active-size', 'border-cyan-500', 'bg-slate-800', 'text-cyan-300');
+                            b.classList.add('text-slate-400');
+                        });
+                        btn.classList.add('active-size', 'border-cyan-500', 'bg-slate-800', 'text-cyan-300');
+                        btn.classList.remove('text-slate-400');
+                        this.targetScale = parseFloat(btn.dataset.scale);
+                    });
                 });
 
                 // Sound Toggle
@@ -1133,13 +1196,13 @@
                     });
                 });
 
-                // Modal Buttons
+                // Modals
                 const infoModal = document.getElementById('infoModal');
                 document.getElementById('infoModalBtn').addEventListener('click', () => infoModal.classList.remove('hidden'));
                 document.getElementById('closeInfoBtn').addEventListener('click', () => infoModal.classList.add('hidden'));
                 document.getElementById('closeInfoModalBtn').addEventListener('click', () => infoModal.classList.add('hidden'));
 
-                // Navigation / Game Control Buttons
+                // Game Control Buttons
                 document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('menuBtn').addEventListener('click', () => {
